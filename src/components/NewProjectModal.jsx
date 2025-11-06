@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Download } from 'lucide-react';
+import { fetchCompleteGitHubInfo } from '../utils/github';
 
 export default function NewProjectModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -12,6 +13,9 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     complexity: 'simple',
     isCompleted: false,
   });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -34,6 +38,35 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       complexity: 'simple',
       isCompleted: false,
     });
+    setError('');
+  };
+
+  const handleFetchFromGitHub = async () => {
+    if (!formData.repoUrl) {
+      setError('Por favor, insira uma URL do GitHub');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const repoData = await fetchCompleteGitHubInfo(formData.repoUrl);
+      
+      setFormData(prev => ({
+        ...prev,
+        name: repoData.name || prev.name,
+        description: repoData.description || prev.description,
+        languages: repoData.languages || prev.languages,
+        webUrl: repoData.webUrl || prev.webUrl,
+        downloadUrl: repoData.downloadUrl || prev.downloadUrl,
+      }));
+    } catch (err) {
+      console.error('Erro ao buscar do GitHub:', err);
+      setError(err.message || 'Erro ao buscar dados do GitHub');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -54,6 +87,37 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* GitHub URL com botão de busca */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              URL do Repositório GitHub
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={formData.repoUrl}
+                onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
+                className="flex-1 px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="https://github.com/usuario/repositorio"
+              />
+              <button
+                type="button"
+                onClick={handleFetchFromGitHub}
+                disabled={loading || !formData.repoUrl}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                {loading ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+            {error && (
+              <p className="text-red-400 text-sm mt-2">{error}</p>
+            )}
+            <p className="text-gray-500 text-sm mt-2">
+              Cole a URL do repositório e clique em "Buscar" para preencher automaticamente
+            </p>
+          </div>
+
           {/* Nome */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -99,19 +163,6 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
 
           {/* URLs */}
           <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                URL do Repositório
-              </label>
-              <input
-                type="url"
-                value={formData.repoUrl}
-                onChange={(e) => setFormData({ ...formData, repoUrl: e.target.value })}
-                className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-                placeholder="https://github.com/user/repo"
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 URL do Site/Demo
