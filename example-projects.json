@@ -1,0 +1,87 @@
+[
+  {
+    "id": "example-1",
+    "name": "Dashboard de Projetos GitHub",
+    "createdAt": "2025-11-06T10:00:00.000Z",
+    "description": "Dashboard visual para organizar projetos do GitHub com localStorage",
+    "languages": ["React", "JavaScript", "Tailwind CSS"],
+    "repoUrl": "https://github.com/seu-usuario/seu-repo",
+    "downloadUrl": "",
+    "webUrl": "https://seu-usuario.github.io/seu-repo",
+    "isCompleted": false,
+    "complexity": "medium",
+    "linesOfCode": {
+      "JavaScript": 1500,
+      "CSS": 200,
+      "HTML": 50
+    },
+    "details": {
+      "ideas": "- Adicionar drag and drop para reordenar\n- Implementar temas personalizados\n- Criar integração com API do GitHub\n- Adicionar gráficos de estatísticas",
+      "improvements": "- Melhorar responsividade mobile\n- Adicionar animações de transição\n- Otimizar performance de filtros\n- Implementar busca mais inteligente",
+      "problems": "- Performance com muitos projetos (>100)\n- localStorage tem limite de ~5MB\n- Necessário melhorar validação de import",
+      "purpose": "Criar uma ferramenta visual e prática para organizar e documentar projetos pessoais do GitHub, substituindo o Notion para este caso de uso específico.",
+      "users": "Desenvolvedores que mantêm múltiplos projetos pessoais e precisam de uma forma visual de organizá-los e documentar ideias.",
+      "mvp": "✅ CRUD de projetos\n✅ Visualizações (Grid, Lista, Kanban)\n✅ Filtros e busca\n✅ Import/Export JSON\n✅ Página de detalhes\n⏳ Drag and drop\n⏳ Temas",
+      "stack": "**Frontend:**\n- React 18\n- Vite\n- Tailwind CSS\n- React Router\n\n**Bibliotecas:**\n- date-fns (datas)\n- lucide-react (ícones)\n- @dnd-kit (drag and drop)\n\n**Deploy:**\n- GitHub Pages\n- GitHub Actions",
+      "upgrades": "**v2.0:**\n- Integração com GitHub API\n- Estatísticas automáticas de commits\n- Sincronização via GitHub Gist\n- PWA para uso offline\n\n**v2.1:**\n- Colaboração em tempo real\n- Exportar como PDF/Markdown\n- Templates de projetos"
+    },
+    "group": "in-progress",
+    "tags": ["web", "dashboard", "react"],
+    "lastModified": "2025-11-06T15:30:00.000Z"
+  },
+  {
+    "id": "example-2",
+    "name": "API REST com Node.js",
+    "createdAt": "2025-10-15T08:00:00.000Z",
+    "description": "API RESTful completa com autenticação JWT e MongoDB",
+    "languages": ["Node.js", "Express", "MongoDB"],
+    "repoUrl": "https://github.com/exemplo/api-nodejs",
+    "downloadUrl": "",
+    "webUrl": "",
+    "isCompleted": true,
+    "complexity": "complex",
+    "linesOfCode": {
+      "JavaScript": 3500,
+      "JSON": 150
+    },
+    "details": {
+      "ideas": "- Adicionar rate limiting\n- Implementar cache com Redis\n- Criar documentação com Swagger\n- Adicionar testes E2E",
+      "improvements": "- Refatorar controllers\n- Adicionar validação de schemas\n- Melhorar logs\n- Implementar CI/CD",
+      "problems": "- Performance em queries complexas\n- Alguns endpoints sem testes\n- Documentação incompleta",
+      "purpose": "Desenvolver uma API REST robusta e escalável seguindo as melhores práticas da indústria.",
+      "users": "Aplicações web e mobile que precisam de um backend confiável com autenticação e CRUD completo.",
+      "mvp": "✅ Sistema de autenticação JWT\n✅ CRUD completo de recursos\n✅ Validações\n✅ Tratamento de erros\n✅ Deploy em produção",
+      "stack": "- Node.js v20\n- Express.js\n- MongoDB + Mongoose\n- JWT para auth\n- bcrypt para senhas\n- Jest para testes\n- Docker\n- Heroku/Railway",
+      "upgrades": "- Microserviços\n- GraphQL\n- WebSockets\n- Monitoramento com New Relic"
+    },
+    "group": "completed",
+    "tags": ["backend", "api", "nodejs"],
+    "lastModified": "2025-10-30T12:00:00.000Z"
+  },
+  {
+    "id": "example-3",
+    "name": "App Mobile com React Native",
+    "createdAt": "2025-11-01T14:00:00.000Z",
+    "description": "Aplicativo mobile multiplataforma para gestão de tarefas",
+    "languages": ["React Native", "TypeScript", "Expo"],
+    "repoUrl": "",
+    "downloadUrl": "",
+    "webUrl": "",
+    "isCompleted": false,
+    "complexity": "simple",
+    "linesOfCode": {},
+    "details": {
+      "ideas": "- Sincronização com nuvem\n- Notificações push\n- Widget para home screen\n- Modo offline primeiro",
+      "improvements": "",
+      "problems": "",
+      "purpose": "Criar um app simples e intuitivo para gerenciar tarefas diárias com foco em UX.",
+      "users": "Pessoas que precisam organizar suas tarefas diárias de forma simples e rápida.",
+      "mvp": "- [ ] Criar/editar/deletar tarefas\n- [ ] Categorias\n- [ ] Filtros\n- [ ] Modo dark\n- [ ] Persistência local",
+      "stack": "- React Native\n- Expo\n- TypeScript\n- AsyncStorage\n- React Navigation",
+      "upgrades": "- Integração com calendário\n- Compartilhar tarefas\n- Lembretes\n- Estatísticas"
+    },
+    "group": "backlog",
+    "tags": ["mobile", "react-native", "app"],
+    "lastModified": "2025-11-01T14:00:00.000Z"
+  }
+]
