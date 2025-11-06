@@ -135,7 +135,7 @@ git push origin main
 
 - Vá em **Actions** no GitHub
 - Aguarde o workflow "Deploy to GitHub Pages" terminar
-- Acesse: `https://SEU-USUARIO.github.io/SEU-REPOSITORIO/`
+- Acesse: `https://felipe-alcantara.github.io/Git-Hub-Repositories/`
 
 ---
 

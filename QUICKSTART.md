@@ -17,7 +17,7 @@ Bem-vindo ao **GitHub Projects Dashboard**! Este guia vai te ajudar a começar r
 
 1. **Acesse a URL do projeto:**
    ```
-   https://seu-usuario.github.io/Git-Hub-Repositories/
+   https://felipe-alcantara.github.io/Git-Hub-Repositories/
    ```
 
 2. **Tela inicial vazia:**

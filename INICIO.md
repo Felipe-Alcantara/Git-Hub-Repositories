@@ -162,7 +162,7 @@ npm run preview
 
 Seu site estará em:
 ```
-https://SEU-USUARIO.github.io/SEU-REPOSITORIO/
+https://felipe-alcantara.github.io/Git-Hub-Repositories/
 ```
 
 Compartilhe com amigos! Eles podem:

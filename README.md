@@ -2,8 +2,8 @@
 
 > Dashboard visual e interativo para organizar e gerenciar seus projetos do GitHub localmente no navegador
 
-[![Deploy Status](https://github.com/YOUR_USERNAME/Git-Hub-Repositories/workflows/Deploy%20to%20GitHub%20Pages/badge.svg)](https://github.com/YOUR_USERNAME/Git-Hub-Repositories/actions)
-[![Live Demo](https://img.shields.io/badge/demo-live-success)](https://YOUR_USERNAME.github.io/Git-Hub-Repositories/)
+[![Deploy Status](https://github.com/Felipe-Alcantara/Git-Hub-Repositories/workflows/Deploy%20to%20GitHub%20Pages/badge.svg)](https://github.com/Felipe-Alcantara/Git-Hub-Repositories/actions)
+[![Live Demo](https://img.shields.io/badge/demo-live-success)](https://felipe-alcantara.github.io/Git-Hub-Repositories/)
 
 ## ✨ Funcionalidades
 
@@ -50,7 +50,7 @@ Cada projeto tem uma página completa com seções:
 ## 🚀 Como Usar
 
 ### Acesso Direto
-Basta acessar: **[https://YOUR_USERNAME.github.io/Git-Hub-Repositories/](https://YOUR_USERNAME.github.io/Git-Hub-Repositories/)**
+Basta acessar: **[https://felipe-alcantara.github.io/Git-Hub-Repositories/](https://felipe-alcantara.github.io/Git-Hub-Repositories/)**
 
 Não precisa clonar nem instalar nada! Abra o link e comece a usar imediatamente.
 
@@ -58,7 +58,7 @@ Não precisa clonar nem instalar nada! Abra o link e comece a usar imediatamente
 
 ```bash
 # Clone o repositório
-git clone https://github.com/YOUR_USERNAME/Git-Hub-Repositories.git
+git clone https://github.com/Felipe-Alcantara/Git-Hub-Repositories.git
 cd Git-Hub-Repositories
 
 # Instale as dependências
