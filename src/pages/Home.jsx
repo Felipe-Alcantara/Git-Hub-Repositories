@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
+import { getAllTags } from '../utils/tags';
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject } = useProjects();
@@ -12,8 +13,20 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterComplexity, setFilterComplexity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTags, setFilterTags] = useState([]); // Novo filtro de tags
   const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity
   const [showFilters, setShowFilters] = useState(false);
+
+  // Obter todas as tags usadas nos projetos
+  const usedTags = useMemo(() => {
+    const tagsSet = new Set();
+    projects.forEach(p => {
+      if (Array.isArray(p.languages)) {
+        p.languages.forEach(tag => tagsSet.add(tag));
+      }
+    });
+    return Array.from(tagsSet).sort();
+  }, [projects]);
 
   // Filtrar e ordenar projetos
   const filteredProjects = useMemo(() => {
@@ -40,6 +53,15 @@ export default function Home() {
       );
     }
 
+    // Filtro de tags
+    if (filterTags.length > 0) {
+      filtered = filtered.filter(p => 
+        filterTags.every(tag => 
+          Array.isArray(p.languages) && p.languages.includes(tag)
+        )
+      );
+    }
+
     // Ordenação
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -56,7 +78,15 @@ export default function Home() {
     });
 
     return filtered;
-  }, [projects, searchTerm, filterComplexity, filterStatus, sortBy]);
+  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, sortBy]);
+
+  const toggleTagFilter = (tag) => {
+    setFilterTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
 
   const handleSaveProject = (projectData) => {
     addProject(projectData);
@@ -208,6 +238,41 @@ export default function Home() {
                     <option value="completed">Finalizados</option>
                   </select>
                 </div>
+
+                {/* Filtrar por tags */}
+                {usedTags.length > 0 && (
+                  <div className="w-full">
+                    <label className="block text-sm text-gray-400 mb-2">
+                      <Tag className="w-4 h-4 inline mr-1" />
+                      Filtrar por Tecnologias
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {usedTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTagFilter(tag)}
+                          className={`px-3 py-1 rounded-lg text-sm transition-colors flex items-center gap-1 ${
+                            filterTags.includes(tag)
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-dark-surface border border-dark-border text-gray-300 hover:bg-dark-hover'
+                          }`}
+                        >
+                          <Tag className="w-3 h-3" />
+                          {tag}
+                          {filterTags.includes(tag) && <X className="w-3 h-3 ml-1" />}
+                        </button>
+                      ))}
+                    </div>
+                    {filterTags.length > 0 && (
+                      <button
+                        onClick={() => setFilterTags([])}
+                        className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
+                      >
+                        Limpar filtros de tecnologias
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

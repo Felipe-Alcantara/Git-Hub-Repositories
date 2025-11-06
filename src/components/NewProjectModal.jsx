@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { X, Download } from 'lucide-react';
 import { fetchCompleteGitHubInfo } from '../utils/github';
+import TagSelector from './TagSelector';
 
 export default function NewProjectModal({ isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    languages: '',
+    languages: [],
     repoUrl: '',
     downloadUrl: '',
     webUrl: '',
@@ -22,7 +23,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     
     const projectData = {
       ...formData,
-      languages: formData.languages.split(',').map(l => l.trim()).filter(Boolean),
+      languages: formData.languages, // Já é array agora
     };
     
     onSave(projectData);
@@ -31,7 +32,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     setFormData({
       name: '',
       description: '',
-      languages: '',
+      languages: [],
       repoUrl: '',
       downloadUrl: '',
       webUrl: '',
@@ -53,11 +54,16 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     try {
       const repoData = await fetchCompleteGitHubInfo(formData.repoUrl);
       
+      // Converte linguagens de string para array
+      const languagesArray = repoData.languages 
+        ? repoData.languages.split(',').map(l => l.trim()).filter(Boolean)
+        : [];
+      
       setFormData(prev => ({
         ...prev,
         name: repoData.name || prev.name,
         description: repoData.description || prev.description,
-        languages: repoData.languages || prev.languages,
+        languages: languagesArray.length > 0 ? languagesArray : prev.languages,
         webUrl: repoData.webUrl || prev.webUrl,
         downloadUrl: repoData.downloadUrl || prev.downloadUrl,
       }));
@@ -147,17 +153,14 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
             />
           </div>
 
-          {/* Linguagens */}
+          {/* Linguagens/Tecnologias */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Linguagens/Tecnologias
             </label>
-            <input
-              type="text"
-              value={formData.languages}
-              onChange={(e) => setFormData({ ...formData, languages: e.target.value })}
-              className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-              placeholder="JavaScript, React, Node.js (separadas por vírgula)"
+            <TagSelector
+              selectedTags={formData.languages}
+              onChange={(tags) => setFormData({ ...formData, languages: tags })}
             />
           </div>
 
