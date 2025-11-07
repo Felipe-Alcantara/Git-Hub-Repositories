@@ -34,6 +34,22 @@ export default function Home() {
     return Array.from(tagsSet).sort();
   }, [projects]);
 
+  // Obter todos os grupos únicos para o kanban
+  const kanbanGroups = useMemo(() => {
+    const groupsSet = new Set();
+    projects.forEach(p => {
+      if (p.group) {
+        groupsSet.add(p.group);
+      }
+    });
+    
+    // Grupos padrão sempre visíveis
+    const defaultGroups = ['backlog', 'in-progress', 'completed'];
+    defaultGroups.forEach(g => groupsSet.add(g));
+    
+    return Array.from(groupsSet).sort();
+  }, [projects]);
+
   // Filtrar e ordenar projetos
   const filteredProjects = useMemo(() => {
     let filtered = [...projects];
@@ -237,19 +253,9 @@ export default function Home() {
       return;
     }
 
-    // Determina o novo status baseado na coluna
-    let shouldBeCompleted = project.isCompleted;
-    
-    if (columnType === 'inProgress') {
-      shouldBeCompleted = false;
-    } else if (columnType === 'completed') {
-      shouldBeCompleted = true;
-    }
-    // Se for 'all', mantém o status atual
-
-    // Atualiza o projeto apenas se o status mudou
-    if (shouldBeCompleted !== project.isCompleted) {
-      updateProject(draggedProject, { isCompleted: shouldBeCompleted });
+    // Atualiza o grupo do projeto
+    if (project.group !== columnType) {
+      updateProject(draggedProject, { group: columnType });
     }
 
     setDraggedProject(null);
@@ -509,59 +515,30 @@ export default function Home() {
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
               : viewMode === 'list'
               ? 'space-y-4'
-              : 'grid grid-cols-1 lg:grid-cols-3 gap-6'
+              : 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6'
           }>
             {viewMode === 'kanban' ? (
-              // Visualização Kanban
+              // Visualização Kanban - Colunas dinâmicas baseadas em grupos
               <>
-                <KanbanColumn 
-                  title="Em Andamento"
-                  columnType="inProgress"
-                  projects={filteredProjects.filter(p => !p.isCompleted)}
-                  selectedProjects={selectedProjects}
-                  onToggleSelect={toggleProjectSelection}
-                  onDelete={handleDeleteProject}
-                  onDragOver={handleKanbanDragOver}
-                  onDragLeave={handleKanbanDragLeave}
-                  onDrop={handleKanbanDrop}
-                  isDragOver={dragOverColumn === 'inProgress'}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  draggedProject={draggedProject}
-                  dragOverProject={dragOverProject}
-                />
-                <KanbanColumn 
-                  title="Finalizados"
-                  columnType="completed"
-                  projects={filteredProjects.filter(p => p.isCompleted)}
-                  selectedProjects={selectedProjects}
-                  onToggleSelect={toggleProjectSelection}
-                  onDelete={handleDeleteProject}
-                  onDragOver={handleKanbanDragOver}
-                  onDragLeave={handleKanbanDragLeave}
-                  onDrop={handleKanbanDrop}
-                  isDragOver={dragOverColumn === 'completed'}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  draggedProject={draggedProject}
-                  dragOverProject={dragOverProject}
-                />
-                <KanbanColumn 
-                  title="Todos"
-                  columnType="all"
-                  projects={filteredProjects}
-                  selectedProjects={selectedProjects}
-                  onToggleSelect={toggleProjectSelection}
-                  onDelete={handleDeleteProject}
-                  onDragOver={handleKanbanDragOver}
-                  onDragLeave={handleKanbanDragLeave}
-                  onDrop={handleKanbanDrop}
-                  isDragOver={dragOverColumn === 'all'}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  draggedProject={draggedProject}
-                  dragOverProject={dragOverProject}
-                />
+                {kanbanGroups.map(group => (
+                  <KanbanColumn 
+                    key={group}
+                    title={group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    columnType={group}
+                    projects={filteredProjects.filter(p => p.group === group)}
+                    selectedProjects={selectedProjects}
+                    onToggleSelect={toggleProjectSelection}
+                    onDelete={handleDeleteProject}
+                    onDragOver={handleKanbanDragOver}
+                    onDragLeave={handleKanbanDragLeave}
+                    onDrop={handleKanbanDrop}
+                    isDragOver={dragOverColumn === group}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    draggedProject={draggedProject}
+                    dragOverProject={dragOverProject}
+                  />
+                ))}
               </>
             ) : (
               // Visualização Grid/List

@@ -116,6 +116,15 @@ export default function ProjectCard({
         )}
       </div>
 
+      {/* Grupo Kanban */}
+      {project.group && (
+        <div className="mb-3">
+          <span className="inline-block px-2.5 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/30">
+            📋 {project.group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+          </span>
+        </div>
+      )}
+
       {/* Linguagens */}
       {project.languages && project.languages.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">

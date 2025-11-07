@@ -189,6 +189,33 @@ export default function ProjectPage() {
                   )}
                 </div>
 
+                {/* Grupo Kanban */}
+                <div>
+                  <div className="text-gray-400 text-sm mb-2">Grupo Kanban</div>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedProject.group || 'backlog'}
+                      onChange={(e) => handleBasicChange('group', e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
+                      placeholder="backlog, in-progress, completed..."
+                      list="group-suggestions-edit"
+                    />
+                  ) : (
+                    <span className="inline-block px-3 py-1 bg-green-500/10 text-green-400 text-sm rounded-full border border-green-500/30">
+                      {(project.group || 'backlog').split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    </span>
+                  )}
+                  <datalist id="group-suggestions-edit">
+                    <option value="backlog" />
+                    <option value="in-progress" />
+                    <option value="completed" />
+                    <option value="archived" />
+                    <option value="on-hold" />
+                    <option value="review" />
+                  </datalist>
+                </div>
+
                 {/* Descrição */}
                 <div>
                   <div className="text-gray-400 text-sm mb-2">Descrição</div>

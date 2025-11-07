@@ -38,7 +38,20 @@ export const createEmptyProject = () => ({
 export const getProjects = () => {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const projects = data ? JSON.parse(data) : [];
+    
+    // Migração: adiciona campo 'group' em projetos antigos
+    const migratedProjects = projects.map(project => ({
+      ...project,
+      group: project.group || 'backlog', // Define 'backlog' como padrão se não existir
+    }));
+    
+    // Salva de volta se houve mudanças
+    if (projects.length > 0 && projects.some(p => !p.group)) {
+      saveProjects(migratedProjects);
+    }
+    
+    return migratedProjects;
   } catch (error) {
     console.error('Erro ao carregar projetos:', error);
     return [];

@@ -14,6 +14,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     complexity: 'simple',
     isCompleted: false,
     repoCreatedAt: null,
+    group: 'backlog',
   });
 
   const [loading, setLoading] = useState(false);
@@ -40,6 +41,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       complexity: 'simple',
       isCompleted: false,
       repoCreatedAt: null,
+      group: 'backlog',
     });
     setError('');
   };
@@ -211,6 +213,32 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
               <option value="complex">Complexo</option>
               <option value="unfeasible">Inviável no momento</option>
             </select>
+          </div>
+
+          {/* Grupo Kanban */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Grupo Kanban
+            </label>
+            <input
+              type="text"
+              value={formData.group}
+              onChange={(e) => setFormData({ ...formData, group: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+              className="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder="backlog, in-progress, completed..."
+              list="group-suggestions"
+            />
+            <datalist id="group-suggestions">
+              <option value="backlog" />
+              <option value="in-progress" />
+              <option value="completed" />
+              <option value="archived" />
+              <option value="on-hold" />
+              <option value="review" />
+            </datalist>
+            <p className="mt-1 text-xs text-gray-500">
+              O grupo define em qual coluna do Kanban o projeto aparecerá
+            </p>
           </div>
 
           {/* Status */}
