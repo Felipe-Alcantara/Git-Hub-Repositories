@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,20 +18,29 @@ const complexityLabels = {
 };
 
 export default function ProjectCard({ project, onDelete }) {
+  const navigate = useNavigate();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
 
+  const handleCardClick = (e) => {
+    // Não navega se clicar em links ou botões
+    if (e.target.closest('a') || e.target.closest('button')) {
+      return;
+    }
+    navigate(`/project/${project.id}`);
+  };
+
   return (
-    <div className="bg-dark-surface border border-dark-border rounded-lg p-5 hover:border-blue-500/50 transition-all duration-200 group">
+    <div 
+      onClick={handleCardClick}
+      className="bg-dark-surface border border-dark-border rounded-lg p-5 hover:border-blue-500/50 transition-all duration-200 group cursor-pointer"
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <Link 
-          to={`/project/${project.id}`}
-          className="flex-1"
-        >
+        <div className="flex-1">
           <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors">
             {project.name || 'Projeto sem nome'}
           </h3>
-        </Link>
+        </div>
         
         <div className="flex items-center gap-2">
           {project.isCompleted ? (
@@ -126,15 +135,15 @@ export default function ProjectCard({ project, onDelete }) {
 
       {/* Ações */}
       <div className="flex justify-between items-center pt-3 border-t border-dark-border">
-        <Link 
-          to={`/project/${project.id}`}
-          className="text-blue-400 text-sm hover:text-blue-300 transition-colors"
-        >
-          Ver detalhes →
-        </Link>
+        <span className="text-blue-400 text-sm">
+          Clique para ver detalhes →
+        </span>
         
         <button
-          onClick={() => onDelete(project.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(project.id);
+          }}
           className="text-red-400 text-sm hover:text-red-300 transition-colors"
         >
           Deletar
