@@ -8,7 +8,7 @@ import { getAllTags } from '../utils/tags';
 import { getCustomOrder, saveCustomOrder } from '../utils/storage';
 
 export default function Home() {
-  const { projects, loading, addProject, deleteProject } = useProjects();
+  const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +20,7 @@ export default function Home() {
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
   const [draggedProject, setDraggedProject] = useState(null);
   const [dragOverProject, setDragOverProject] = useState(null); // Projeto sobre o qual está passando
+  const [dragOverColumn, setDragOverColumn] = useState(null); // Coluna kanban sobre a qual está passando
   const [customOrder, setCustomOrder] = useState(() => getCustomOrder()); // Estado local da ordem
 
   // Obter todas as tags usadas nos projetos
@@ -206,6 +207,53 @@ export default function Home() {
   const handleDragEnd = () => {
     setDraggedProject(null);
     setDragOverProject(null);
+    setDragOverColumn(null);
+  };
+
+  // Handlers para drag and drop no Kanban
+  const handleKanbanDragOver = (e, columnType) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(columnType);
+  };
+
+  const handleKanbanDragLeave = () => {
+    setDragOverColumn(null);
+  };
+
+  const handleKanbanDrop = (e, columnType) => {
+    e.preventDefault();
+    
+    if (!draggedProject) {
+      setDragOverColumn(null);
+      return;
+    }
+
+    // Encontra o projeto arrastado
+    const project = projects.find(p => p.id === draggedProject);
+    if (!project) {
+      setDraggedProject(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    // Determina o novo status baseado na coluna
+    let shouldBeCompleted = project.isCompleted;
+    
+    if (columnType === 'inProgress') {
+      shouldBeCompleted = false;
+    } else if (columnType === 'completed') {
+      shouldBeCompleted = true;
+    }
+    // Se for 'all', mantém o status atual
+
+    // Atualiza o projeto apenas se o status mudou
+    if (shouldBeCompleted !== project.isCompleted) {
+      updateProject(draggedProject, { isCompleted: shouldBeCompleted });
+    }
+
+    setDraggedProject(null);
+    setDragOverColumn(null);
   };
 
   const handleImportComplete = () => {
@@ -468,24 +516,51 @@ export default function Home() {
               <>
                 <KanbanColumn 
                   title="Em Andamento"
+                  columnType="inProgress"
                   projects={filteredProjects.filter(p => !p.isCompleted)}
                   selectedProjects={selectedProjects}
                   onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
+                  onDragOver={handleKanbanDragOver}
+                  onDragLeave={handleKanbanDragLeave}
+                  onDrop={handleKanbanDrop}
+                  isDragOver={dragOverColumn === 'inProgress'}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  draggedProject={draggedProject}
+                  dragOverProject={dragOverProject}
                 />
                 <KanbanColumn 
                   title="Finalizados"
+                  columnType="completed"
                   projects={filteredProjects.filter(p => p.isCompleted)}
                   selectedProjects={selectedProjects}
                   onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
+                  onDragOver={handleKanbanDragOver}
+                  onDragLeave={handleKanbanDragLeave}
+                  onDrop={handleKanbanDrop}
+                  isDragOver={dragOverColumn === 'completed'}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  draggedProject={draggedProject}
+                  dragOverProject={dragOverProject}
                 />
                 <KanbanColumn 
                   title="Todos"
+                  columnType="all"
                   projects={filteredProjects}
                   selectedProjects={selectedProjects}
                   onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
+                  onDragOver={handleKanbanDragOver}
+                  onDragLeave={handleKanbanDragLeave}
+                  onDrop={handleKanbanDrop}
+                  isDragOver={dragOverColumn === 'all'}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  draggedProject={draggedProject}
+                  dragOverProject={dragOverProject}
                 />
               </>
             ) : (
@@ -523,9 +598,31 @@ export default function Home() {
 }
 
 // Componente auxiliar para colunas Kanban
-function KanbanColumn({ title, projects, onDelete, selectedProjects = [], onToggleSelect }) {
+function KanbanColumn({ 
+  title, 
+  projects, 
+  onDelete, 
+  selectedProjects = [], 
+  onToggleSelect,
+  columnType,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  isDragOver,
+  onDragStart,
+  onDragEnd,
+  draggedProject,
+  dragOverProject
+}) {
   return (
-    <div className="bg-dark-surface border border-dark-border rounded-lg p-4">
+    <div 
+      className={`bg-dark-surface border rounded-lg p-4 transition-all ${
+        isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-dark-border'
+      }`}
+      onDragOver={(e) => onDragOver(e, columnType)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, columnType)}
+    >
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
         {title}
         <span className="text-sm text-gray-400 font-normal">{projects.length}</span>
@@ -538,6 +635,11 @@ function KanbanColumn({ title, projects, onDelete, selectedProjects = [], onTogg
             isSelected={selectedProjects.includes(project.id)}
             onToggleSelect={onToggleSelect}
             onDelete={onDelete}
+            draggable={true}
+            onDragStart={(e) => onDragStart(e, project.id)}
+            onDragEnd={onDragEnd}
+            isDragging={draggedProject === project.id}
+            isDragOver={dragOverProject === project.id}
           />
         ))}
       </div>
