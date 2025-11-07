@@ -17,7 +17,7 @@ const complexityLabels = {
   unfeasible: 'Inviável',
 };
 
-export default function ProjectCard({ project, onDelete }) {
+export default function ProjectCard({ project, onDelete, isSelected = false, onToggleSelect }) {
   const navigate = useNavigate();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
 
@@ -29,10 +29,19 @@ export default function ProjectCard({ project, onDelete }) {
     navigate(`/project/${project.id}`);
   };
 
+  const handleCheckboxClick = (e) => {
+    e.stopPropagation();
+    if (onToggleSelect) {
+      onToggleSelect(project.id);
+    }
+  };
+
   return (
     <div 
       onClick={handleCardClick}
-      className="bg-dark-surface border border-dark-border rounded-lg p-5 hover:border-blue-500/50 transition-all duration-200 group cursor-pointer"
+      className={`bg-dark-surface border rounded-lg p-5 hover:border-blue-500/50 transition-all duration-200 group cursor-pointer ${
+        isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-dark-border'
+      }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
@@ -42,13 +51,26 @@ export default function ProjectCard({ project, onDelete }) {
           </h3>
         </div>
         
-        <div className="flex items-center gap-2">
-          {project.isCompleted ? (
-            <CheckCircle2 className="w-5 h-5 text-green-400" />
+        {/* Círculo de seleção/status */}
+        <button
+          onClick={handleCheckboxClick}
+          className={`p-1 rounded-full transition-all hover:bg-dark-hover ${
+            isSelected 
+              ? 'text-blue-400 hover:text-blue-500' 
+              : project.isCompleted 
+              ? 'text-green-400 hover:text-green-500' 
+              : 'text-gray-500 hover:text-gray-400'
+          }`}
+          title={isSelected ? 'Desselecionar' : project.isCompleted ? 'Concluído - Clique para selecionar' : 'Em andamento - Clique para selecionar'}
+        >
+          {isSelected ? (
+            <CheckCircle2 className="w-6 h-6 fill-current" />
+          ) : project.isCompleted ? (
+            <CheckCircle2 className="w-6 h-6" />
           ) : (
-            <Circle className="w-5 h-5 text-gray-500" />
+            <Circle className="w-6 h-6" />
           )}
-        </div>
+        </button>
       </div>
 
       {/* Descrição */}

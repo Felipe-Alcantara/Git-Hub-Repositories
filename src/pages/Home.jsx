@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
@@ -16,6 +16,7 @@ export default function Home() {
   const [filterTags, setFilterTags] = useState([]); // Novo filtro de tags
   const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
 
   // Obter todas as tags usadas nos projetos
   const usedTags = useMemo(() => {
@@ -88,6 +89,32 @@ export default function Home() {
     );
   };
 
+  const toggleProjectSelection = (projectId) => {
+    setSelectedProjects(prev => 
+      prev.includes(projectId)
+        ? prev.filter(id => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProjects.length === filteredProjects.length) {
+      setSelectedProjects([]);
+    } else {
+      setSelectedProjects(filteredProjects.map(p => p.id));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedProjects.length === 0) return;
+    
+    const count = selectedProjects.length;
+    if (confirm(`Tem certeza que deseja deletar ${count} ${count === 1 ? 'projeto' : 'projetos'}?`)) {
+      selectedProjects.forEach(id => deleteProject(id));
+      setSelectedProjects([]);
+    }
+  };
+
   const handleSaveProject = (projectData) => {
     addProject(projectData);
     setIsModalOpen(false);
@@ -96,6 +123,7 @@ export default function Home() {
   const handleDeleteProject = (id) => {
     if (confirm('Tem certeza que deseja deletar este projeto?')) {
       deleteProject(id);
+      setSelectedProjects(prev => prev.filter(selectedId => selectedId !== id));
     }
   };
 
@@ -113,6 +141,33 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      {/* Barra de ações para seleção múltipla */}
+      {selectedProjects.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-6 py-4 rounded-lg shadow-2xl border border-blue-500 flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <CheckSquare className="w-5 h-5" />
+            <span className="font-medium">{selectedProjects.length} {selectedProjects.length === 1 ? 'projeto selecionado' : 'projetos selecionados'}</span>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Deletar
+            </button>
+            
+            <button
+              onClick={() => setSelectedProjects([])}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-dark-surface border-b border-dark-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -154,6 +209,20 @@ export default function Home() {
 
               {/* Controles de visualização */}
               <div className="flex gap-2">
+                {filteredProjects.length > 0 && (
+                  <button
+                    onClick={toggleSelectAll}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                      selectedProjects.length === filteredProjects.length
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-dark-bg border border-dark-border text-gray-300 hover:bg-dark-hover'
+                    }`}
+                  >
+                    <CheckSquare className="w-4 h-4" />
+                    {selectedProjects.length === filteredProjects.length ? 'Desselecionar' : 'Selecionar'} Todos
+                  </button>
+                )}
+
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -313,16 +382,22 @@ export default function Home() {
                 <KanbanColumn 
                   title="Em Andamento"
                   projects={filteredProjects.filter(p => !p.isCompleted)}
+                  selectedProjects={selectedProjects}
+                  onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
                 />
                 <KanbanColumn 
                   title="Finalizados"
                   projects={filteredProjects.filter(p => p.isCompleted)}
+                  selectedProjects={selectedProjects}
+                  onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
                 />
                 <KanbanColumn 
                   title="Todos"
                   projects={filteredProjects}
+                  selectedProjects={selectedProjects}
+                  onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
                 />
               </>
@@ -332,6 +407,8 @@ export default function Home() {
                 <ProjectCard 
                   key={project.id} 
                   project={project}
+                  isSelected={selectedProjects.includes(project.id)}
+                  onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
                 />
               ))
@@ -351,7 +428,7 @@ export default function Home() {
 }
 
 // Componente auxiliar para colunas Kanban
-function KanbanColumn({ title, projects, onDelete }) {
+function KanbanColumn({ title, projects, onDelete, selectedProjects = [], onToggleSelect }) {
   return (
     <div className="bg-dark-surface border border-dark-border rounded-lg p-4">
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
@@ -363,6 +440,8 @@ function KanbanColumn({ title, projects, onDelete }) {
           <ProjectCard 
             key={project.id} 
             project={project}
+            isSelected={selectedProjects.includes(project.id)}
+            onToggleSelect={onToggleSelect}
             onDelete={onDelete}
           />
         ))}
