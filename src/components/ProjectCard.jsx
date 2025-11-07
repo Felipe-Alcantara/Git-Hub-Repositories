@@ -17,7 +17,20 @@ const complexityLabels = {
   unfeasible: 'Inviável',
 };
 
-export default function ProjectCard({ project, onDelete, isSelected = false, onToggleSelect }) {
+export default function ProjectCard({ 
+  project, 
+  onDelete, 
+  isSelected = false, 
+  onToggleSelect,
+  draggable = false,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  isDragging = false,
+  isDragOver = false
+}) {
   const navigate = useNavigate();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
 
@@ -39,9 +52,17 @@ export default function ProjectCard({ project, onDelete, isSelected = false, onT
   return (
     <div 
       onClick={handleCardClick}
-      className={`bg-dark-surface border rounded-lg p-5 hover:border-blue-500/50 transition-all duration-200 group cursor-pointer ${
-        isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-dark-border'
-      }`}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`bg-dark-surface border rounded-lg p-5 transition-all duration-200 group cursor-pointer
+        ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-dark-border'}
+        ${isDragging ? 'opacity-30 scale-95' : 'hover:border-blue-500/50'}
+        ${isDragOver ? 'border-green-500 ring-2 ring-green-500/50 scale-105' : ''}
+      `}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">

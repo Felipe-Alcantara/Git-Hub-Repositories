@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'github_projects_dashboard';
+const CUSTOM_ORDER_KEY = 'github_projects_custom_order';
 
 // Estrutura de um projeto
 export const createEmptyProject = () => ({
@@ -163,4 +164,32 @@ export const importProjects = (file) => {
 // Limpar todos os dados (útil para testes)
 export const clearAllProjects = () => {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(CUSTOM_ORDER_KEY);
+};
+
+// Obter ordem customizada
+export const getCustomOrder = () => {
+  try {
+    const data = localStorage.getItem(CUSTOM_ORDER_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Erro ao carregar ordem customizada:', error);
+    return [];
+  }
+};
+
+// Salvar ordem customizada
+export const saveCustomOrder = (projectIds) => {
+  try {
+    localStorage.setItem(CUSTOM_ORDER_KEY, JSON.stringify(projectIds));
+    return true;
+  } catch (error) {
+    console.error('Erro ao salvar ordem customizada:', error);
+    return false;
+  }
+};
+
+// Limpar ordem customizada
+export const clearCustomOrder = () => {
+  localStorage.removeItem(CUSTOM_ORDER_KEY);
 };

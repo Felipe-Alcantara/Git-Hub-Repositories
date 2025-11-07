@@ -5,6 +5,7 @@ import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import { getAllTags } from '../utils/tags';
+import { getCustomOrder, saveCustomOrder } from '../utils/storage';
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject } = useProjects();
@@ -14,9 +15,12 @@ export default function Home() {
   const [filterComplexity, setFilterComplexity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTags, setFilterTags] = useState([]); // Novo filtro de tags
-  const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity
+  const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity, custom
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
+  const [draggedProject, setDraggedProject] = useState(null);
+  const [dragOverProject, setDragOverProject] = useState(null); // Projeto sobre o qual está passando
+  const [customOrder, setCustomOrder] = useState(() => getCustomOrder()); // Estado local da ordem
 
   // Obter todas as tags usadas nos projetos
   const usedTags = useMemo(() => {
@@ -73,13 +77,28 @@ export default function Home() {
         case 'complexity':
           const complexityOrder = { simple: 0, medium: 1, complex: 2, unfeasible: 3 };
           return complexityOrder[a.complexity] - complexityOrder[b.complexity];
+        case 'custom':
+          // Ordem customizada
+          const indexA = customOrder.indexOf(a.id);
+          const indexB = customOrder.indexOf(b.id);
+          
+          // Se ambos estão na ordem customizada
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          // Se apenas A está na ordem customizada
+          if (indexA !== -1) return -1;
+          // Se apenas B está na ordem customizada
+          if (indexB !== -1) return 1;
+          // Se nenhum está, manter ordem original
+          return 0;
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, sortBy]);
+  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, sortBy, customOrder]);
 
   const toggleTagFilter = (tag) => {
     setFilterTags(prev => 
@@ -125,6 +144,65 @@ export default function Home() {
       deleteProject(id);
       setSelectedProjects(prev => prev.filter(selectedId => selectedId !== id));
     }
+  };
+
+  const handleDragStart = (e, projectId) => {
+    setDraggedProject(projectId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', projectId);
+  };
+
+  const handleDragOver = (e, projectId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (projectId !== draggedProject) {
+      setDragOverProject(projectId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverProject(null);
+  };
+
+  const handleDrop = (e, targetProjectId) => {
+    e.preventDefault();
+    
+    if (!draggedProject || draggedProject === targetProjectId) {
+      setDraggedProject(null);
+      return;
+    }
+
+    // Pega a ordem atual dos projetos filtrados
+    const currentOrder = filteredProjects.map(p => p.id);
+    const draggedIndex = currentOrder.indexOf(draggedProject);
+    const targetIndex = currentOrder.indexOf(targetProjectId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedProject(null);
+      return;
+    }
+
+    // Reordena
+    const newOrder = [...currentOrder];
+    newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedProject);
+
+    // Salva a nova ordem no storage
+    saveCustomOrder(newOrder);
+    
+    // Atualiza o estado local
+    setCustomOrder(newOrder);
+    
+    // Muda para ordenação customizada
+    setSortBy('custom');
+    
+    setDraggedProject(null);
+    setDragOverProject(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedProject(null);
+    setDragOverProject(null);
   };
 
   const handleImportComplete = () => {
@@ -275,7 +353,13 @@ export default function Home() {
                     <option value="createdAt">Data de criação</option>
                     <option value="name">Nome (A-Z)</option>
                     <option value="complexity">Complexidade</option>
+                    <option value="custom">Customizado (arraste para reordenar)</option>
                   </select>
+                  {sortBy === 'custom' && (
+                    <p className="text-xs text-blue-400 mt-1">
+                      💡 Arraste os cards para reordenar
+                    </p>
+                  )}
                 </div>
 
                 {/* Filtrar por complexidade */}
@@ -410,6 +494,14 @@ export default function Home() {
                   isSelected={selectedProjects.includes(project.id)}
                   onToggleSelect={toggleProjectSelection}
                   onDelete={handleDeleteProject}
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, project.id)}
+                  onDragOver={(e) => handleDragOver(e, project.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, project.id)}
+                  onDragEnd={handleDragEnd}
+                  isDragging={draggedProject === project.id}
+                  isDragOver={dragOverProject === project.id}
                 />
               ))
             )}
