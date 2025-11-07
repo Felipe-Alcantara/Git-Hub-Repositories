@@ -13,6 +13,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     webUrl: '',
     complexity: 'simple',
     isCompleted: false,
+    repoCreatedAt: null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       webUrl: '',
       complexity: 'simple',
       isCompleted: false,
+      repoCreatedAt: null,
     });
     setError('');
   };
@@ -66,6 +68,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
         languages: languagesArray.length > 0 ? languagesArray : prev.languages,
         webUrl: repoData.webUrl || prev.webUrl,
         downloadUrl: repoData.downloadUrl || prev.downloadUrl,
+        repoCreatedAt: repoData.repoCreatedAt || null, // Data de criação do repo
       }));
     } catch (err) {
       console.error('Erro ao buscar do GitHub:', err);

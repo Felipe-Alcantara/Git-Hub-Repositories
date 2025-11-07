@@ -5,7 +5,8 @@ const CUSTOM_ORDER_KEY = 'github_projects_custom_order';
 export const createEmptyProject = () => ({
   id: crypto.randomUUID(),
   name: '',
-  createdAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(), // Data de criação do card
+  repoCreatedAt: null, // Data de criação do repositório no GitHub
   description: '',
   languages: [],
   repoUrl: '',

@@ -151,7 +151,7 @@ export default function ProjectPage() {
                     <span className="text-sm">Criado em</span>
                   </div>
                   <p className="text-white ml-6">
-                    {format(new Date(project.createdAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    {format(new Date(project.repoCreatedAt || project.createdAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </p>
                 </div>
 

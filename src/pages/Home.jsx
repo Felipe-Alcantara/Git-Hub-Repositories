@@ -73,7 +73,10 @@ export default function Home() {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'createdAt':
-          return new Date(b.createdAt) - new Date(a.createdAt);
+          // Usa data do repositório se disponível, senão usa data do card
+          const dateA = a.repoCreatedAt || a.createdAt;
+          const dateB = b.repoCreatedAt || b.createdAt;
+          return new Date(dateB) - new Date(dateA);
         case 'complexity':
           const complexityOrder = { simple: 0, medium: 1, complex: 2, unfeasible: 3 };
           return complexityOrder[a.complexity] - complexityOrder[b.complexity];

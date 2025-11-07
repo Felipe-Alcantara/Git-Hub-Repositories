@@ -132,6 +132,7 @@ export async function fetchCompleteGitHubInfo(url) {
     repoUrl: repoInfo.data.repoUrl,
     webUrl: repoInfo.data.homepage || pagesUrl || '',
     downloadUrl: `${repoInfo.data.repoUrl}/archive/refs/heads/${repoInfo.data.defaultBranch}.zip`,
+    repoCreatedAt: repoInfo.data.createdAt, // Data de criação do repositório
   };
 }
 

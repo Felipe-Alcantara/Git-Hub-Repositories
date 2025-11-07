@@ -105,7 +105,7 @@ export default function ProjectCard({
       <div className="flex flex-wrap gap-3 mb-4 text-sm text-gray-400">
         <div className="flex items-center gap-1.5">
           <Calendar className="w-4 h-4" />
-          <span>{format(new Date(project.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
+          <span>{format(new Date(project.repoCreatedAt || project.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
         </div>
         
         {totalLines > 0 && (
