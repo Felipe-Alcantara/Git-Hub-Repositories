@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'github_projects_dashboard';
 const CUSTOM_ORDER_KEY = 'github_projects_custom_order';
+const CUSTOM_GROUPS_KEY = 'github_projects_custom_groups';
 
 // Estrutura de um projeto
 export const createEmptyProject = () => ({
@@ -206,4 +207,67 @@ export const saveCustomOrder = (projectIds) => {
 // Limpar ordem customizada
 export const clearCustomOrder = () => {
   localStorage.removeItem(CUSTOM_ORDER_KEY);
+};
+
+// ==================== GRUPOS CUSTOMIZADOS ====================
+
+// Obter grupos customizados
+export const getCustomGroups = () => {
+  try {
+    const data = localStorage.getItem(CUSTOM_GROUPS_KEY);
+    const groups = data ? JSON.parse(data) : [];
+    
+    // Sempre incluir grupos padrão
+    const defaultGroups = ['backlog', 'in-progress', 'completed'];
+    const allGroups = new Set([...defaultGroups, ...groups]);
+    
+    return Array.from(allGroups);
+  } catch (error) {
+    console.error('Erro ao carregar grupos customizados:', error);
+    return ['backlog', 'in-progress', 'completed'];
+  }
+};
+
+// Adicionar grupo customizado
+export const addCustomGroup = (groupName) => {
+  try {
+    const groups = getCustomGroups();
+    const normalizedName = groupName.toLowerCase().trim().replace(/\s+/g, '-');
+    
+    if (!normalizedName || groups.includes(normalizedName)) {
+      return false; // Já existe ou nome inválido
+    }
+    
+    groups.push(normalizedName);
+    localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(groups));
+    return true;
+  } catch (error) {
+    console.error('Erro ao adicionar grupo customizado:', error);
+    return false;
+  }
+};
+
+// Remover grupo customizado
+export const removeCustomGroup = (groupName) => {
+  try {
+    const groups = getCustomGroups();
+    const defaultGroups = ['backlog', 'in-progress', 'completed'];
+    
+    // Não permite remover grupos padrão
+    if (defaultGroups.includes(groupName)) {
+      return false;
+    }
+    
+    const filtered = groups.filter(g => g !== groupName);
+    localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(filtered));
+    return true;
+  } catch (error) {
+    console.error('Erro ao remover grupo customizado:', error);
+    return false;
+  }
+};
+
+// Limpar grupos customizados
+export const clearCustomGroups = () => {
+  localStorage.removeItem(CUSTOM_GROUPS_KEY);
 };

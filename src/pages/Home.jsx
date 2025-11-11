@@ -5,7 +5,7 @@ import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import { getAllTags } from '../utils/tags';
-import { getCustomOrder, saveCustomOrder } from '../utils/storage';
+import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup } from '../utils/storage';
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
@@ -22,6 +22,9 @@ export default function Home() {
   const [dragOverProject, setDragOverProject] = useState(null); // Projeto sobre o qual está passando
   const [dragOverColumn, setDragOverColumn] = useState(null); // Coluna kanban sobre a qual está passando
   const [customOrder, setCustomOrder] = useState(() => getCustomOrder()); // Estado local da ordem
+  const [newGroupName, setNewGroupName] = useState(''); // Nome do novo grupo
+  const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
+  const [refreshKey, setRefreshKey] = useState(0); // Força re-render dos grupos
 
   // Obter todas as tags usadas nos projetos
   const usedTags = useMemo(() => {
@@ -37,18 +40,24 @@ export default function Home() {
   // Obter todos os grupos únicos para o kanban
   const kanbanGroups = useMemo(() => {
     const groupsSet = new Set();
+    
+    // Adiciona grupos customizados salvos
+    const customGroups = getCustomGroups();
+    customGroups.forEach(g => groupsSet.add(g));
+    
+    // Adiciona grupos que estão sendo usados nos projetos
     projects.forEach(p => {
       if (p.group) {
         groupsSet.add(p.group);
+        // Se o grupo não está salvo, salva automaticamente
+        if (!customGroups.includes(p.group)) {
+          addCustomGroup(p.group);
+        }
       }
     });
     
-    // Grupos padrão sempre visíveis
-    const defaultGroups = ['backlog', 'in-progress', 'completed'];
-    defaultGroups.forEach(g => groupsSet.add(g));
-    
     return Array.from(groupsSet).sort();
-  }, [projects]);
+  }, [projects, refreshKey]);
 
   // Filtrar e ordenar projetos
   const filteredProjects = useMemo(() => {
@@ -260,6 +269,18 @@ export default function Home() {
 
     setDraggedProject(null);
     setDragOverColumn(null);
+  };
+
+  const handleCreateNewGroup = () => {
+    if (!newGroupName.trim()) return;
+    
+    const success = addCustomGroup(newGroupName);
+    if (success) {
+      setNewGroupName('');
+      setShowNewGroupInput(false);
+      // Force re-render para mostrar novo grupo
+      setRefreshKey(prev => prev + 1);
+    }
   };
 
   const handleImportComplete = () => {
@@ -539,6 +560,48 @@ export default function Home() {
                     dragOverProject={dragOverProject}
                   />
                 ))}
+                
+                {/* Botão para adicionar novo grupo */}
+                <div className="bg-dark-surface border border-dashed border-dark-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[200px]">
+                  {showNewGroupInput ? (
+                    <div className="w-full space-y-3">
+                      <input
+                        type="text"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleCreateNewGroup()}
+                        placeholder="Nome do grupo..."
+                        className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleCreateNewGroup}
+                          className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                        >
+                          Criar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowNewGroupInput(false);
+                            setNewGroupName('');
+                          }}
+                          className="flex-1 px-3 py-2 bg-dark-hover hover:bg-dark-border text-white text-sm rounded transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowNewGroupInput(true)}
+                      className="flex flex-col items-center gap-2 text-gray-400 hover:text-blue-400 transition-colors"
+                    >
+                      <Plus className="w-8 h-8" />
+                      <span className="text-sm font-medium">Novo Grupo</span>
+                    </button>
+                  )}
+                </div>
               </>
             ) : (
               // Visualização Grid/List
