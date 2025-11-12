@@ -8,6 +8,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     name: '',
     description: '',
     languages: [],
+    languagesData: {},
     repoUrl: '',
     downloadUrl: '',
     webUrl: '',
@@ -36,6 +37,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       name: '',
       description: '',
       languages: [],
+      languagesData: {},
       repoUrl: '',
       downloadUrl: '',
       webUrl: '',
@@ -70,6 +72,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
         name: repoData.name || prev.name,
         description: repoData.description || prev.description,
         languages: languagesArray.length > 0 ? languagesArray : prev.languages,
+        languagesData: repoData.languagesData || prev.languagesData, // Dados completos com bytes
         webUrl: repoData.webUrl || prev.webUrl,
         downloadUrl: repoData.downloadUrl || prev.downloadUrl,
         repoCreatedAt: repoData.repoCreatedAt || null, // Data de criação do repo

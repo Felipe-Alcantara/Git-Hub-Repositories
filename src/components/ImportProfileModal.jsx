@@ -65,7 +65,8 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
         const extractedUsername = extractUsername(username);
         
         // Busca linguagens do repositório
-        const languages = await fetchGitHubLanguages(extractedUsername, repo.name);
+        const languagesData = await fetchGitHubLanguages(extractedUsername, repo.name);
+        const languageNames = Object.keys(languagesData).sort((a, b) => languagesData[b] - languagesData[a]);
         
         // Detecta GitHub Pages
         const pagesUrl = repo.homepage || `https://${extractedUsername}.github.io/${repo.name}/`;
@@ -73,7 +74,8 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
         const projectData = {
           name: repo.name,
           description: repo.description,
-          languages: languages,
+          languages: languageNames,
+          languagesData: languagesData, // Dados completos com bytes
           repoUrl: repo.repoUrl,
           webUrl: pagesUrl,
           downloadUrl: `${repo.repoUrl}/archive/refs/heads/${repo.defaultBranch}.zip`,

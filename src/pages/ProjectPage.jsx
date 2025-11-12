@@ -247,6 +247,97 @@ export default function ProjectPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Estatísticas de Linguagens */}
+                {project.languagesData && Object.keys(project.languagesData).length > 0 && (
+                  <div className="mt-6">
+                    <div className="text-gray-400 text-sm mb-3">Estatísticas de Código</div>
+                    
+                    {(() => {
+                      const languages = project.languagesData;
+                      const totalBytes = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+                      const BYTES_PER_LINE = 60; // Estimativa: 1 linha ≈ 60 bytes
+                      
+                      // Cores para cada linguagem
+                      const languageColors = {
+                        'JavaScript': 'bg-yellow-400',
+                        'TypeScript': 'bg-blue-500',
+                        'Python': 'bg-blue-400',
+                        'Java': 'bg-red-500',
+                        'C++': 'bg-pink-500',
+                        'C#': 'bg-purple-500',
+                        'Ruby': 'bg-red-600',
+                        'Go': 'bg-cyan-400',
+                        'Rust': 'bg-orange-600',
+                        'PHP': 'bg-indigo-400',
+                        'HTML': 'bg-orange-500',
+                        'CSS': 'bg-blue-400',
+                        'SCSS': 'bg-pink-400',
+                        'Shell': 'bg-green-500',
+                        'Batchfile': 'bg-green-600',
+                      };
+                      
+                      const sortedLanguages = Object.entries(languages)
+                        .sort((a, b) => b[1] - a[1]);
+                      
+                      return (
+                        <div className="space-y-3">
+                          {/* Barra de progresso visual */}
+                          <div className="flex h-3 rounded-full overflow-hidden bg-dark-border">
+                            {sortedLanguages.map(([lang, bytes], idx) => {
+                              const percentage = (bytes / totalBytes) * 100;
+                              const color = languageColors[lang] || 'bg-gray-500';
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`${color} transition-all hover:opacity-80`}
+                                  style={{ width: `${percentage}%` }}
+                                  title={`${lang}: ${percentage.toFixed(1)}%`}
+                                />
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Lista detalhada */}
+                          <div className="space-y-2">
+                            {sortedLanguages.map(([lang, bytes], idx) => {
+                              const percentage = (bytes / totalBytes) * 100;
+                              const estimatedLines = Math.round(bytes / BYTES_PER_LINE);
+                              const color = languageColors[lang] || 'bg-gray-500';
+                              
+                              return (
+                                <div key={idx} className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                                    <span className="text-white font-medium">{lang}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-gray-400">
+                                    <span>{percentage.toFixed(1)}%</span>
+                                    <span>~{estimatedLines.toLocaleString('pt-BR')} linhas</span>
+                                    <span className="text-xs">{(bytes / 1024).toFixed(1)} KB</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Total */}
+                          <div className="pt-3 border-t border-dark-border flex items-center justify-between text-sm">
+                            <span className="text-gray-400">Total</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-white font-semibold">
+                                ~{Math.round(totalBytes / BYTES_PER_LINE).toLocaleString('pt-BR')} linhas
+                              </span>
+                              <span className="text-gray-400 text-xs">
+                                {(totalBytes / 1024).toFixed(1)} KB
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
             </div>
 

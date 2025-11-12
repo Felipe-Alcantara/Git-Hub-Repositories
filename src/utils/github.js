@@ -123,7 +123,7 @@ export async function fetchGitHubRepo(owner, repo) {
  * Busca linguagens do repositório
  * @param {string} owner - Dono do repositório
  * @param {string} repo - Nome do repositório
- * @returns {Promise<Array>} - Lista de linguagens
+ * @returns {Promise<Object>} - Objeto com linguagens e seus bytes
  */
 export async function fetchGitHubLanguages(owner, repo) {
   try {
@@ -132,11 +132,27 @@ export async function fetchGitHubLanguages(owner, repo) {
     });
     
     if (!response.ok) {
-      return [];
+      return {};
     }
     
     const data = await response.json();
     
+    // Retorna o objeto completo com bytes por linguagem
+    return data;
+  } catch (error) {
+    return {};
+  }
+}
+
+/**
+ * Busca apenas os nomes das linguagens ordenados por uso
+ * @param {string} owner - Dono do repositório
+ * @param {string} repo - Nome do repositório
+ * @returns {Promise<Array>} - Lista de nomes de linguagens
+ */
+export async function fetchGitHubLanguageNames(owner, repo) {
+  try {
+    const data = await fetchGitHubLanguages(owner, repo);
     // Retorna linguagens ordenadas por uso (bytes)
     return Object.keys(data).sort((a, b) => data[b] - data[a]);
   } catch (error) {
@@ -167,7 +183,8 @@ export async function fetchCompleteGitHubInfo(url) {
   }
   
   // Busca linguagens
-  const languages = await fetchGitHubLanguages(owner, repo);
+  const languagesData = await fetchGitHubLanguages(owner, repo);
+  const languageNames = Object.keys(languagesData).sort((a, b) => languagesData[b] - languagesData[a]);
   
   // Detecta GitHub Pages
   const pagesUrl = await detectGitHubPages(owner, repo);
@@ -175,7 +192,8 @@ export async function fetchCompleteGitHubInfo(url) {
   return {
     name: repoInfo.data.name,
     description: repoInfo.data.description,
-    languages: languages.join(', '),
+    languages: languageNames.join(', '),
+    languagesData: languagesData, // Dados completos com bytes
     repoUrl: repoInfo.data.repoUrl,
     webUrl: repoInfo.data.homepage || pagesUrl || '',
     downloadUrl: `${repoInfo.data.repoUrl}/archive/refs/heads/${repoInfo.data.defaultBranch}.zip`,
