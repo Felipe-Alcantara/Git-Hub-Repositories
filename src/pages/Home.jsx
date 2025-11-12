@@ -8,12 +8,14 @@ import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
+import ImportProfileModal from '../components/ImportProfileModal';
 import { getAllTags } from '../utils/tags';
 import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
@@ -297,6 +299,13 @@ export default function Home() {
 
               <div className="flex gap-3">
                 <ImportExportButtons onImportComplete={handleImportComplete} />
+                <button
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Importar Perfil</span>
+                </button>
                 <button
                   onClick={() => setIsModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -615,6 +624,13 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveProject}
+      />
+
+      {/* Modal de Importação de Perfil */}
+      <ImportProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        onImport={handleSaveProject}
       />
     </div>
   );

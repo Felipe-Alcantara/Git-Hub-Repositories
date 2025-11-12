@@ -137,6 +137,60 @@ export async function fetchCompleteGitHubInfo(url) {
 }
 
 /**
+ * Busca todos os repositórios públicos de um usuário do GitHub
+ * @param {string} username - Nome de usuário do GitHub
+ * @returns {Promise<Array>} - Lista de repositórios
+ */
+export async function fetchUserRepositories(username) {
+  try {
+    const repos = [];
+    let page = 1;
+    let hasMore = true;
+
+    // Busca paginada (até 100 repos por página)
+    while (hasMore) {
+      const response = await fetch(
+        `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&sort=updated`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}: Usuário não encontrado`);
+      }
+
+      const data = await response.json();
+      
+      if (data.length === 0) {
+        hasMore = false;
+      } else {
+        repos.push(...data);
+        page++;
+      }
+
+      // Limita a 500 repos para não travar
+      if (repos.length >= 500) {
+        hasMore = false;
+      }
+    }
+
+    return repos.map(repo => ({
+      name: repo.name,
+      description: repo.description || '',
+      language: repo.language,
+      repoUrl: repo.html_url,
+      homepage: repo.homepage || '',
+      topics: repo.topics || [],
+      stars: repo.stargazers_count,
+      forks: repo.forks_count,
+      createdAt: repo.created_at,
+      updatedAt: repo.updated_at,
+      defaultBranch: repo.default_branch,
+    }));
+  } catch (error) {
+    throw new Error(error.message || 'Erro ao buscar repositórios do usuário');
+  }
+}
+
+/**
  * Detecta se repositório tem GitHub Pages
  * @param {string} owner - Dono do repositório
  * @param {string} repo - Nome do repositório
