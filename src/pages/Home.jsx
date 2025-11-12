@@ -22,9 +22,6 @@ export default function Home() {
   const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity, custom
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
-  const [draggedProject, setDraggedProject] = useState(null);
-  const [dragOverProject, setDragOverProject] = useState(null); // Projeto sobre o qual está passando
-  const [dragOverColumn, setDragOverColumn] = useState(null); // Coluna kanban sobre a qual está passando
   const [customOrder, setCustomOrder] = useState(() => getCustomOrder()); // Estado local da ordem
   const [newGroupName, setNewGroupName] = useState(''); // Nome do novo grupo
   const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
@@ -187,108 +184,6 @@ export default function Home() {
     }
   };
 
-  const handleDragStart = (e, projectId) => {
-    setDraggedProject(projectId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', projectId);
-  };
-
-  const handleDragOver = (e, projectId) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Só atualiza se mudou de card alvo e não é o próprio card sendo arrastado
-    if (projectId !== draggedProject && projectId !== dragOverProject) {
-      setDragOverProject(projectId);
-    }
-  };
-
-  const handleDragLeave = (e) => {
-    // Evita limpar quando o mouse está apenas saindo para entrar em um filho
-    if (e.currentTarget.contains(e.relatedTarget)) {
-      return;
-    }
-    setDragOverProject(null);
-  };
-
-  const handleDrop = (e, targetProjectId) => {
-    e.preventDefault();
-    
-    if (!draggedProject || draggedProject === targetProjectId) {
-      setDraggedProject(null);
-      return;
-    }
-
-    // Pega a ordem atual dos projetos filtrados
-    const currentOrder = filteredProjects.map(p => p.id);
-    const draggedIndex = currentOrder.indexOf(draggedProject);
-    const targetIndex = currentOrder.indexOf(targetProjectId);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedProject(null);
-      return;
-    }
-
-    // Reordena
-    const newOrder = [...currentOrder];
-    newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, draggedProject);
-
-    // Salva a nova ordem no storage
-    saveCustomOrder(newOrder);
-    
-    // Atualiza o estado local
-    setCustomOrder(newOrder);
-    
-    // Muda para ordenação customizada
-    setSortBy('custom');
-    
-    setDraggedProject(null);
-    setDragOverProject(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedProject(null);
-    setDragOverProject(null);
-    setDragOverColumn(null);
-  };
-
-  // Handlers para drag and drop no Kanban
-  const handleKanbanDragOver = (e, columnType) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverColumn(columnType);
-  };
-
-  const handleKanbanDragLeave = () => {
-    setDragOverColumn(null);
-  };
-
-  const handleKanbanDrop = (e, columnType) => {
-    e.preventDefault();
-    
-    if (!draggedProject) {
-      setDragOverColumn(null);
-      return;
-    }
-
-    // Encontra o projeto arrastado
-    const project = projects.find(p => p.id === draggedProject);
-    if (!project) {
-      setDraggedProject(null);
-      setDragOverColumn(null);
-      return;
-    }
-
-    // Atualiza o grupo do projeto
-    if (project.group !== columnType) {
-      updateProject(draggedProject, { group: columnType });
-    }
-
-    setDraggedProject(null);
-    setDragOverColumn(null);
-  };
-
   const handleCreateNewGroup = () => {
     if (!newGroupName.trim()) return;
     
@@ -302,10 +197,51 @@ export default function Home() {
   };
 
   const handleGroupReorder = (newGroupsOrder) => {
-    console.log('Salvando nova ordem:', newGroupsOrder);
-    const saved = saveGroupsOrder(newGroupsOrder);
-    console.log('Ordem salva:', saved);
+    saveGroupsOrder(newGroupsOrder);
     setRefreshKey(prev => prev + 1);
+  };
+
+  // Nova função para reordenar cards dentro da mesma coluna Kanban
+  const handleCardReorder = (group, newCardOrderInGroup) => {
+    const currentProjectOrder = customOrder.length > 0 ? customOrder : projects.map(p => p.id);
+    
+    const projectIdsFromOtherGroups = currentProjectOrder.filter(id => {
+      const p = projects.find(proj => proj.id === id);
+      return p && p.group !== group;
+    });
+  
+    // Recalcula a ordem global
+    const newGlobalOrder = [...projectIdsFromOtherGroups];
+    
+    // Encontra o índice do primeiro item do grupo atual na ordem antiga
+    const firstItemOfGroupIndex = currentProjectOrder.findIndex(id => {
+        const p = projects.find(proj => proj.id === id);
+        return p && p.group === group;
+    });
+
+    // Se o grupo já tinha itens, insere a nova ordem na posição correta
+    if (firstItemOfGroupIndex !== -1) {
+        // Encontra a posição correta para inserir, mantendo a ordem relativa das colunas
+        let insertIndex = 0;
+        for(let i = 0; i < firstItemOfGroupIndex; i++) {
+            if (projectIdsFromOtherGroups.includes(currentProjectOrder[i])) {
+                insertIndex++;
+            }
+        }
+        newGlobalOrder.splice(insertIndex, 0, ...newCardOrderInGroup);
+    } else {
+        // Se o grupo era novo ou vazio, adiciona no final
+        newGlobalOrder.push(...newCardOrderInGroup);
+    }
+  
+    saveCustomOrder(newGlobalOrder);
+    setCustomOrder(newGlobalOrder);
+    if (sortBy !== 'custom') setSortBy('custom');
+  };
+
+  // Nova função para mover cards entre colunas Kanban
+  const handleCardMove = (cardId, destinationGroup) => {
+    updateProject(cardId, { group: destinationGroup });
   };
 
   const handleImportComplete = () => {
@@ -571,15 +507,9 @@ export default function Home() {
                 selectedProjects={selectedProjects}
                 toggleProjectSelection={toggleProjectSelection}
                 handleDeleteProject={handleDeleteProject}
-                handleKanbanDragOver={handleKanbanDragOver}
-                handleKanbanDragLeave={handleKanbanDragLeave}
-                handleKanbanDrop={handleKanbanDrop}
-                dragOverColumn={dragOverColumn}
-                handleDragStart={handleDragStart}
-                handleDragEnd={handleDragEnd}
-                draggedProject={draggedProject}
-                dragOverProject={dragOverProject}
                 onGroupReorder={handleGroupReorder}
+                onCardReorder={handleCardReorder}
+                onCardMove={handleCardMove}
                 showNewGroupInput={showNewGroupInput}
                 newGroupName={newGroupName}
                 setNewGroupName={setNewGroupName}
@@ -623,15 +553,9 @@ function SortableKanbanBoard({
   selectedProjects,
   toggleProjectSelection,
   handleDeleteProject,
-  handleKanbanDragOver,
-  handleKanbanDragLeave,
-  handleKanbanDrop,
-  dragOverColumn,
-  handleDragStart,
-  handleDragEnd,
-  draggedProject,
-  dragOverProject,
   onGroupReorder,
+  onCardReorder,
+  onCardMove,
   showNewGroupInput,
   newGroupName,
   setNewGroupName,
@@ -644,21 +568,68 @@ function SortableKanbanBoard({
     })
   );
 
-  const handleGroupDragEnd = (event) => {
+  const [activeItem, setActiveItem] = useState(null);
+
+  const handleDragStart = (event) => {
+    setActiveItem(event.active);
+  };
+
+  const handleDragEnd = (event) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    
-    const oldIndex = groups.indexOf(active.id);
-    const newIndex = groups.indexOf(over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    
-    const newGroupsOrder = arrayMove(groups, oldIndex, newIndex);
-    console.log('Reordenando grupos:', { oldIndex, newIndex, newGroupsOrder });
-    onGroupReorder(newGroupsOrder);
+    setActiveItem(null);
+
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+    const activeType = active.data.current?.type;
+    const overType = over.data.current?.type;
+
+    // Cenário 1: Reordenar colunas
+    if (activeType === 'COLUMN' && overType === 'COLUMN' && activeId !== overId) {
+      const oldIndex = groups.indexOf(activeId);
+      const newIndex = groups.indexOf(overId);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        onGroupReorder(arrayMove(groups, oldIndex, newIndex));
+      }
+      return;
+    }
+
+    // Cenário 2: Mover ou reordenar cards
+    if (activeType === 'CARD') {
+      const sourceColumn = active.data.current.group;
+      const destinationColumn = over.data.current?.type === 'COLUMN' 
+        ? over.id 
+        : over.data.current?.group;
+
+      if (!destinationColumn) return;
+
+      // Se moveu para a mesma coluna (reordenação)
+      if (sourceColumn === destinationColumn) {
+        if (activeId === overId) return;
+        
+        const projectsInColumn = filteredProjects.filter(p => p.group === sourceColumn).map(p => p.id);
+        const oldIndex = projectsInColumn.indexOf(activeId);
+        const newIndex = projectsInColumn.indexOf(overId);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          onCardReorder(sourceColumn, arrayMove(projectsInColumn, oldIndex, newIndex));
+        }
+      } 
+      // Se moveu para uma coluna diferente
+      else {
+        onCardMove(activeId, destinationColumn);
+      }
+    }
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroupDragEnd}>
+    <DndContext 
+      sensors={sensors} 
+      collisionDetection={closestCenter} 
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={groups} strategy={rectSortingStrategy}>
         {groups.map(group => (
           <SortableKanbanColumn
@@ -669,14 +640,7 @@ function SortableKanbanBoard({
             selectedProjects={selectedProjects}
             onToggleSelect={toggleProjectSelection}
             onDelete={handleDeleteProject}
-            onDragOver={handleKanbanDragOver}
-            onDragLeave={handleKanbanDragLeave}
-            onDrop={handleKanbanDrop}
-            isDragOver={dragOverColumn === group}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            draggedProject={draggedProject}
-            dragOverProject={dragOverProject}
+            activeItem={activeItem}
           />
         ))}
       </SortableContext>
@@ -734,20 +698,18 @@ function SortableKanbanColumn({
   selectedProjects, 
   onToggleSelect, 
   onDelete,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  isDragOver,
-  onDragStart,
-  onDragEnd,
-  draggedProject,
-  dragOverProject
+  activeItem
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: group,
+    data: { type: 'COLUMN' }
+  });
   const style = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
   };
+
+  const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -755,19 +717,13 @@ function SortableKanbanColumn({
         title={title}
         columnType={group}
         projects={projects}
+        projectIds={projectIds}
         selectedProjects={selectedProjects}
         onToggleSelect={onToggleSelect}
         onDelete={onDelete}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        isDragOver={isDragOver}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        draggedProject={draggedProject}
-        dragOverProject={dragOverProject}
         isDraggingColumn={isDragging}
         dragHandleProps={{ ...attributes, ...listeners }}
+        activeItem={activeItem}
       />
     </div>
   );
@@ -777,31 +733,24 @@ function SortableKanbanColumn({
 function KanbanColumn({ 
   title, 
   projects, 
+  projectIds,
   onDelete, 
   selectedProjects = [], 
   onToggleSelect,
   columnType,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  isDragOver,
-  onDragStart,
-  onDragEnd,
-  draggedProject,
-  dragOverProject,
   isDraggingColumn = false,
-  dragHandleProps = {}
+  dragHandleProps = {},
+  activeItem
 }) {
+  const isOver = activeItem?.data.current?.type === 'CARD' && activeItem?.data.current?.group !== columnType;
+
   return (
     <div 
       className={`bg-dark-surface border rounded-lg p-4 min-h-[500px] flex flex-col
         transition-all duration-300 ease-in-out
-        ${isDragOver ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/20' : 'border-dark-border'}
+        ${isOver ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/20' : 'border-dark-border'}
         ${isDraggingColumn ? 'opacity-50' : ''}
       `}
-      onDragOver={(e) => onDragOver(e, columnType)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, columnType)}
     >
       <h3 
         className="text-base font-semibold text-white mb-4 flex items-center justify-between pb-3 border-b border-dark-border cursor-move"
@@ -810,23 +759,19 @@ function KanbanColumn({
         {title}
         <span className="text-xs text-gray-400 font-normal bg-dark-border px-2 py-0.5 rounded-full">{projects.length}</span>
       </h3>
-      <div className="space-y-3 overflow-y-auto flex-1 pr-2 pt-1" style={{ maxHeight: 'calc(100vh - 340px)' }}>
-        {projects.map(project => (
-          <ProjectCard 
-            key={project.id} 
-            project={project}
-            viewMode="kanban"
-            isSelected={selectedProjects.includes(project.id)}
-            onToggleSelect={onToggleSelect}
-            onDelete={onDelete}
-            draggable={true}
-            onDragStart={(e) => onDragStart(e, project.id)}
-            onDragEnd={onDragEnd}
-            isDragging={draggedProject === project.id}
-            isDragOver={dragOverProject === project.id}
-          />
-        ))}
-      </div>
+      <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
+        <div className="space-y-3 overflow-y-auto flex-1 pr-2 pt-1" style={{ maxHeight: 'calc(100vh - 340px)' }}>
+          {projects.map(project => (
+            <SortableKanbanProjectCard 
+              key={project.id} 
+              project={project}
+              isSelected={selectedProjects.includes(project.id)}
+              onToggleSelect={onToggleSelect}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      </SortableContext>
     </div>
   );
 }
@@ -890,6 +835,34 @@ function SortableProjectCard({ project, viewMode, isSelected, onToggleSelect, on
         onToggleSelect={onToggleSelect}
         onDelete={onDelete}
         draggable={false}
+        isDragging={isDragging}
+      />
+    </div>
+  );
+}
+
+// Wrapper para cards no Kanban
+function SortableKanbanProjectCard({ project, isSelected, onToggleSelect, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
+    id: project.id,
+    data: { type: 'CARD', group: project.group }
+  });
+  
+  const style = {
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
+    transition,
+    willChange: 'transform',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <ProjectCard
+        project={project}
+        viewMode="kanban"
+        isSelected={isSelected}
+        onToggleSelect={onToggleSelect}
+        onDelete={onDelete}
+        draggable={false} // Desabilitar drag nativo
         isDragging={isDragging}
       />
     </div>
