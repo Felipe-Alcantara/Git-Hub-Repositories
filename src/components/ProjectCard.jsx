@@ -99,7 +99,7 @@ export default function ProjectCard({
 
         {/* Descrição compacta */}
         {project.description && (
-          <p className="text-xs text-gray-400 mb-2 line-clamp-2">
+          <p className="text-xs text-gray-400 mb-2">
             {project.description}
           </p>
         )}
@@ -127,7 +127,7 @@ export default function ProjectCard({
         <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dark-border">
           <div className="flex items-center gap-2">
             <span className={`px-1.5 py-0.5 rounded text-xs ${complexityColors[project.complexity]}`}>
-              {complexityLabels[project.complexity].charAt(0)}
+              {complexityLabels[project.complexity]}
             </span>
             {totalLines > 0 && (
               <span>{(totalLines / 1000).toFixed(0)}k</span>
@@ -222,7 +222,7 @@ export default function ProjectCard({
               {/* Data */}
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                <span>Atualizado {format(new Date(project.repoCreatedAt || project.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                <span>Criado em {format(new Date(project.repoCreatedAt || project.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
               </div>
 
               {/* Linhas de código */}
