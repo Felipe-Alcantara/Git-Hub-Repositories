@@ -294,3 +294,14 @@ export const saveGroupsOrder = (orderedGroups) => {
     return false;
   }
 };
+
+export function deleteCustomGroup(groupName) {
+  const currentGroups = getCustomGroups();
+  if (!currentGroups.includes(groupName)) {
+    console.warn(`Tentativa de deletar um grupo que não existe: ${groupName}`);
+    return false;
+  }
+  const newGroups = currentGroups.filter(g => g !== groupName);
+  localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(newGroups));
+  return true;
+}

@@ -9,7 +9,7 @@ import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import { getAllTags } from '../utils/tags';
-import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder } from '../utils/storage';
+import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
@@ -38,34 +38,21 @@ export default function Home() {
     return Array.from(tagsSet).sort();
   }, [projects]);
 
-  // Obter todos os grupos únicos para o kanban
   const kanbanGroups = useMemo(() => {
-    // Pega a ordem salva
     const customGroups = getCustomGroups();
-    console.log('Grupos carregados do storage:', customGroups);
+    const projectGroups = [...new Set(projects.map(p => p.group || ''))].filter(Boolean);
     
-    const groupsSet = new Set(customGroups);
+    // Identificar grupos que estão nos projetos mas não na ordem customizada
+    const newGroupsFound = projectGroups.filter(pg => !customGroups.includes(pg));
     
-    // Adiciona grupos que estão sendo usados nos projetos mas não estão salvos
-    projects.forEach(p => {
-      if (p.group && !groupsSet.has(p.group)) {
-        groupsSet.add(p.group);
-      }
-    });
+    if (newGroupsFound.length > 0) {
+      // Adicionar novos grupos encontrados ao final da lista de grupos customizados
+      const updatedGroups = [...customGroups, ...newGroupsFound];
+      saveGroupsOrder(updatedGroups); // Salva a nova lista
+      return updatedGroups;
+    }
     
-    // Retorna mantendo a ordem de customGroups + novos grupos no final
-    const orderedGroups = [];
-    customGroups.forEach(g => {
-      if (groupsSet.has(g)) orderedGroups.push(g);
-    });
-    
-    // Adiciona grupos novos que não estão em customGroups
-    Array.from(groupsSet).forEach(g => {
-      if (!orderedGroups.includes(g)) orderedGroups.push(g);
-    });
-    
-    console.log('Grupos ordenados finais:', orderedGroups);
-    return orderedGroups;
+    return customGroups.filter(Boolean); // Retorna a lista customizada (já contém todos os grupos)
   }, [projects, refreshKey]);
 
   // Filtrar e ordenar projetos
@@ -193,6 +180,15 @@ export default function Home() {
       setShowNewGroupInput(false);
       // Force re-render para mostrar novo grupo
       setRefreshKey(prev => prev + 1);
+    }
+  };
+
+  const handleDeleteGroup = (groupName) => {
+    if (confirm(`Tem certeza que deseja deletar o grupo "${groupName}"?`)) {
+      const success = deleteCustomGroup(groupName);
+      if (success) {
+        setRefreshKey(prev => prev + 1);
+      }
     }
   };
 
@@ -510,6 +506,7 @@ export default function Home() {
                 onGroupReorder={handleGroupReorder}
                 onCardReorder={handleCardReorder}
                 onCardMove={handleCardMove}
+                onDeleteGroup={handleDeleteGroup} // Passar a nova função
                 showNewGroupInput={showNewGroupInput}
                 newGroupName={newGroupName}
                 setNewGroupName={setNewGroupName}
@@ -556,6 +553,7 @@ function SortableKanbanBoard({
   onGroupReorder,
   onCardReorder,
   onCardMove,
+  onDeleteGroup, // Receber a nova prop
   showNewGroupInput,
   newGroupName,
   setNewGroupName,
@@ -641,6 +639,7 @@ function SortableKanbanBoard({
             onToggleSelect={toggleProjectSelection}
             onDelete={handleDeleteProject}
             activeItem={activeItem}
+            onDeleteGroup={onDeleteGroup} // Passar para a coluna
           />
         ))}
       </SortableContext>
@@ -698,7 +697,8 @@ function SortableKanbanColumn({
   selectedProjects, 
   onToggleSelect, 
   onDelete,
-  activeItem
+  activeItem,
+  onDeleteGroup // Receber a nova prop
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 
     id: group,
@@ -724,6 +724,7 @@ function SortableKanbanColumn({
         isDraggingColumn={isDragging}
         dragHandleProps={{ ...attributes, ...listeners }}
         activeItem={activeItem}
+        onDeleteGroup={onDeleteGroup} // Passar para o componente de apresentação
       />
     </div>
   );
@@ -740,7 +741,8 @@ function KanbanColumn({
   columnType,
   isDraggingColumn = false,
   dragHandleProps = {},
-  activeItem
+  activeItem,
+  onDeleteGroup
 }) {
   const isOver = activeItem?.data.current?.type === 'CARD' && activeItem?.data.current?.group !== columnType;
 
@@ -756,8 +758,22 @@ function KanbanColumn({
         className="text-base font-semibold text-white mb-4 flex items-center justify-between pb-3 border-b border-dark-border cursor-move"
         {...dragHandleProps}
       >
-        {title}
-        <span className="text-xs text-gray-400 font-normal bg-dark-border px-2 py-0.5 rounded-full">{projects.length}</span>
+        <span className="truncate" title={title}>{title}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 font-normal bg-dark-border px-2 py-0.5 rounded-full">{projects.length}</span>
+          {projects.length === 0 && onDeleteGroup && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation(); // Impede que o drag seja iniciado
+                onDeleteGroup(columnType);
+              }}
+              className="text-gray-500 hover:text-red-500 transition-colors"
+              title="Deletar grupo vazio"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </h3>
       <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
         <div className="space-y-3 overflow-y-auto flex-1 pr-2 pt-1" style={{ maxHeight: 'calc(100vh - 340px)' }}>
