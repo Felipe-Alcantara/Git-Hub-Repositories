@@ -348,6 +348,21 @@ export default function Home() {
                   Filtros
                 </button>
 
+                {viewMode === 'kanban' && (
+                  <button
+                    onClick={() => setShowNewGroupInput(!showNewGroupInput)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                      showNewGroupInput 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-dark-bg border border-dark-border text-gray-300 hover:bg-dark-hover'
+                    }`}
+                    title="Criar novo grupo"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Novo Grupo Kanban
+                  </button>
+                )}
+
                 <div className="flex bg-dark-bg border border-dark-border rounded-lg">
                   <button
                     onClick={() => setViewMode('grid')}
@@ -467,6 +482,45 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Modal de criar novo grupo */}
+      {showNewGroupInput && viewMode === 'kanban' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowNewGroupInput(false)}>
+          <div className="bg-dark-surface border border-dark-border rounded-lg p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-4">Criar Novo Grupo</h3>
+            <input
+              type="text"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreateNewGroup();
+                }
+              }}
+              placeholder="Nome do grupo..."
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowNewGroupInput(false);
+                  setNewGroupName('');
+                }}
+                className="px-4 py-2 bg-dark-hover hover:bg-dark-border text-white rounded transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateNewGroup}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+              >
+                Criar Grupo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Conteúdo principal */}
       <main className={viewMode === 'kanban' ? 'w-full px-4 sm:px-6 lg:px-8 py-8' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
         {filteredProjects.length === 0 ? (
@@ -506,12 +560,7 @@ export default function Home() {
                 onGroupReorder={handleGroupReorder}
                 onCardReorder={handleCardReorder}
                 onCardMove={handleCardMove}
-                onDeleteGroup={handleDeleteGroup} // Passar a nova função
-                showNewGroupInput={showNewGroupInput}
-                newGroupName={newGroupName}
-                setNewGroupName={setNewGroupName}
-                handleCreateNewGroup={handleCreateNewGroup}
-                setShowNewGroupInput={setShowNewGroupInput}
+                onDeleteGroup={handleDeleteGroup}
               />
             ) : (
               // Visualização Grid/List com animação de reorder via DnD Kit
@@ -553,12 +602,7 @@ function SortableKanbanBoard({
   onGroupReorder,
   onCardReorder,
   onCardMove,
-  onDeleteGroup, // Receber a nova prop
-  showNewGroupInput,
-  newGroupName,
-  setNewGroupName,
-  handleCreateNewGroup,
-  setShowNewGroupInput
+  onDeleteGroup
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -651,48 +695,6 @@ function SortableKanbanBoard({
           />
         ))}
       </SortableContext>
-      
-      {/* Botão para adicionar novo grupo */}
-      <div className="bg-dark-surface border border-dashed border-dark-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[200px]">
-        {showNewGroupInput ? (
-          <div className="w-full space-y-3">
-            <input
-              type="text"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleCreateNewGroup()}
-              placeholder="Nome do grupo..."
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={handleCreateNewGroup}
-                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-              >
-                Criar
-              </button>
-              <button
-                onClick={() => {
-                  setShowNewGroupInput(false);
-                  setNewGroupName('');
-                }}
-                className="flex-1 px-3 py-2 bg-dark-hover hover:bg-dark-border text-white text-sm rounded transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowNewGroupInput(true)}
-            className="flex flex-col items-center gap-2 text-gray-400 hover:text-blue-400 transition-colors"
-          >
-            <Plus className="w-8 h-8" />
-            <span className="text-sm font-medium">Novo Grupo</span>
-          </button>
-        )}
-      </div>
 
       <DragOverlay dropAnimation={{
         duration: 200,
