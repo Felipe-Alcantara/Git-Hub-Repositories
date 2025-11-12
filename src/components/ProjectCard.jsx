@@ -61,11 +61,11 @@ export default function ProjectCard({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onDragEnd={onDragEnd}
-        className={`relative bg-dark-surface border-b border-dark-border p-4 group cursor-pointer
+        className={`relative bg-dark-surface border border-dark-border rounded-lg p-4 mb-3 group cursor-pointer
           transition-all duration-200 ease-in-out
-          ${isSelected ? 'bg-blue-500/5 border-l-4 border-l-blue-500' : ''}
-          ${isDragging ? 'opacity-40' : 'hover:bg-dark-hover'}
-          ${isDragOver ? 'border-t-2 border-t-blue-500' : ''}
+          ${isSelected ? 'bg-blue-500/5 border-blue-500 ring-2 ring-blue-500/20 shadow-lg shadow-blue-500/10' : 'hover:border-blue-500/50 hover:shadow-md hover:shadow-blue-500/5'}
+          ${isDragging ? 'opacity-40 scale-98' : ''}
+          ${isDragOver ? 'border-blue-500 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/20' : ''}
         `}
         style={{
           cursor: draggable ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
