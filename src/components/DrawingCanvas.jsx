@@ -3,6 +3,7 @@ import { Trash2, Download, Undo, Redo, Pen, Eraser, Circle, Square, Minus, Save 
 
 export default function DrawingCanvas({ initialData, onSave }) {
   const canvasRef = useRef(null);
+  const lastSavedRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [tool, setTool] = useState('pen'); // pen, eraser, circle, square, line
   const [color, setColor] = useState('#3b82f6'); // azul padrão
@@ -13,6 +14,12 @@ export default function DrawingCanvas({ initialData, onSave }) {
 
   // Carregar dados iniciais do canvas
   useEffect(() => {
+    // Evita recarregar o canvas quando a mudança de initialData veio do próprio onSave
+    if (initialData && lastSavedRef.current && initialData === lastSavedRef.current) {
+      console.log('[DrawingCanvas] Ignorando recarregamento (initialData veio do próprio save)');
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) {
       console.log('[DrawingCanvas] useEffect: Canvas não encontrado');
@@ -55,6 +62,8 @@ export default function DrawingCanvas({ initialData, onSave }) {
         console.log('[DrawingCanvas] Imagem carregada com sucesso');
         ctx.drawImage(img, 0, 0);
         initHistory();
+        // Marca a última imagem conhecida para evitar loops de recarga
+        lastSavedRef.current = initialData;
       };
       img.onerror = (error) => {
         console.error('[DrawingCanvas] Erro ao carregar imagem:', error);
@@ -64,6 +73,8 @@ export default function DrawingCanvas({ initialData, onSave }) {
     } else {
       console.log('[DrawingCanvas] Nenhuma imagem para carregar, iniciando vazio');
       initHistory();
+      // Sem imagem inicial
+      lastSavedRef.current = null;
     }
   // Recarrega quando o initialData muda (quando troca de card)
   }, [initialData]);
@@ -87,7 +98,8 @@ export default function DrawingCanvas({ initialData, onSave }) {
       dataSize: imageData.length
     });
 
-    // Salvar automaticamente
+    // Salvar automaticamente apenas no término do traço
+    lastSavedRef.current = imageData;
     onSave(imageData);
   };
 
@@ -103,6 +115,7 @@ export default function DrawingCanvas({ initialData, onSave }) {
       dataSize: imageData.length,
       timestamp: new Date().toISOString()
     });
+    lastSavedRef.current = imageData;
     onSave(imageData);
   };
 
@@ -121,7 +134,6 @@ export default function DrawingCanvas({ initialData, onSave }) {
       };
       img.src = history[newStep];
       setHistoryStep(newStep);
-      onSave(history[newStep]);
     } else {
       console.log('[DrawingCanvas] Undo: Não há mais ações para desfazer');
     }
@@ -142,7 +154,6 @@ export default function DrawingCanvas({ initialData, onSave }) {
       };
       img.src = history[newStep];
       setHistoryStep(newStep);
-      onSave(history[newStep]);
     } else {
       console.log('[DrawingCanvas] Redo: Não há mais ações para refazer');
     }
