@@ -29,7 +29,8 @@ export default function ProjectCard({
   onDrop,
   onDragEnd,
   isDragging = false,
-  isDragOver = false
+  isDragOver = false,
+  viewMode = 'grid'
 }) {
   const navigate = useNavigate();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
@@ -49,6 +50,138 @@ export default function ProjectCard({
     }
   };
 
+  // Layout compacto para modo lista (estilo GitHub)
+  if (viewMode === 'list') {
+    return (
+      <div 
+        onClick={handleCardClick}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
+        className={`relative bg-dark-surface border-b border-dark-border p-4 group cursor-pointer
+          transition-all duration-200 ease-in-out
+          ${isSelected ? 'bg-blue-500/5 border-l-4 border-l-blue-500' : ''}
+          ${isDragging ? 'opacity-40' : 'hover:bg-dark-hover'}
+          ${isDragOver ? 'border-t-2 border-t-blue-500' : ''}
+        `}
+        style={{
+          cursor: draggable ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
+        }}
+      >
+        <div className="flex items-start gap-3">
+          {/* Círculo de seleção */}
+          <button
+            onClick={handleCheckboxClick}
+            className={`flex-shrink-0 p-1 rounded-full transition-all hover:bg-dark-border ${
+              isSelected 
+                ? 'text-blue-400 hover:text-blue-500' 
+                : project.isCompleted 
+                ? 'text-green-400 hover:text-green-500' 
+                : 'text-gray-500 hover:text-gray-400'
+            }`}
+            title={isSelected ? 'Desselecionar' : project.isCompleted ? 'Concluído' : 'Em andamento'}
+          >
+            {isSelected ? (
+              <CheckCircle2 className="w-5 h-5 fill-current" />
+            ) : project.isCompleted ? (
+              <CheckCircle2 className="w-5 h-5" />
+            ) : (
+              <Circle className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Conteúdo principal */}
+          <div className="flex-1 min-w-0">
+            {/* Título e complexidade */}
+            <div className="flex items-start gap-3 mb-2">
+              <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors break-words flex-1">
+                {project.name || 'Projeto sem nome'}
+              </h3>
+              <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded border ${complexityColors[project.complexity]}`}>
+                {complexityLabels[project.complexity]}
+              </span>
+            </div>
+
+            {/* Descrição */}
+            {project.description && (
+              <p className="text-gray-400 text-sm mb-2 line-clamp-1">
+                {project.description}
+              </p>
+            )}
+
+            {/* Metadados inline */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400">
+              {/* Linguagens */}
+              {project.languages && project.languages.length > 0 && (
+                <div className="flex items-center gap-2">
+                  {project.languages.slice(0, 3).map((lang, idx) => (
+                    <span key={idx} className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                      {lang}
+                    </span>
+                  ))}
+                  {project.languages.length > 3 && (
+                    <span className="text-gray-500">+{project.languages.length - 3}</span>
+                  )}
+                </div>
+              )}
+              
+              {/* Data */}
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                <span>Atualizado {format(new Date(project.repoCreatedAt || project.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
+              </div>
+
+              {/* Linhas de código */}
+              {totalLines > 0 && (
+                <div className="flex items-center gap-1">
+                  <Code2 className="w-3 h-3" />
+                  <span>{totalLines.toLocaleString('pt-BR')} linhas</span>
+                </div>
+              )}
+
+              {/* Grupo */}
+              {project.group && (
+                <span className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded border border-green-500/30">
+                  📋 {project.group}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Ações lado direito */}
+          <div className="flex-shrink-0 flex items-center gap-2">
+            {project.repoUrl && (
+              <a 
+                href={project.repoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                title="Repositório"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(project.id);
+              }}
+              className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
+              title="Deletar"
+            >
+              <span className="text-xs">×</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Layout padrão para grid/kanban
   return (
     <div 
       onClick={handleCardClick}

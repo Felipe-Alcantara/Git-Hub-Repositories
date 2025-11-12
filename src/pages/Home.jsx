@@ -728,6 +728,7 @@ function DnDSortableProjects({ projects, viewMode, selectedProjects, onToggleSel
           <SortableProjectCard
             key={project.id}
             project={project}
+            viewMode={viewMode}
             isSelected={selectedProjects.includes(project.id)}
             onToggleSelect={onToggleSelect}
             onDelete={onDelete}
@@ -739,7 +740,7 @@ function DnDSortableProjects({ projects, viewMode, selectedProjects, onToggleSel
 }
 
 // Wrapper que aplica transformações do DnD Kit ao card
-function SortableProjectCard({ project, isSelected, onToggleSelect, onDelete }) {
+function SortableProjectCard({ project, viewMode, isSelected, onToggleSelect, onDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
   const style = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
@@ -751,6 +752,7 @@ function SortableProjectCard({ project, isSelected, onToggleSelect, onDelete }) 
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <ProjectCard
         project={project}
+        viewMode={viewMode}
         isSelected={isSelected}
         onToggleSelect={onToggleSelect}
         onDelete={onDelete}
