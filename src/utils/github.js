@@ -1,5 +1,45 @@
 // Funções para integração com a API do GitHub
 
+// Token do GitHub (opcional) - armazenado no localStorage
+const GITHUB_TOKEN_KEY = 'github_api_token';
+
+/**
+ * Obtém o token do GitHub do localStorage
+ * @returns {string|null} - Token ou null
+ */
+export function getGitHubToken() {
+  return localStorage.getItem(GITHUB_TOKEN_KEY);
+}
+
+/**
+ * Define o token do GitHub no localStorage
+ * @param {string} token - Token de acesso pessoal do GitHub
+ */
+export function setGitHubToken(token) {
+  if (token) {
+    localStorage.setItem(GITHUB_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(GITHUB_TOKEN_KEY);
+  }
+}
+
+/**
+ * Cria headers para requisições à API do GitHub
+ * @returns {Object} - Headers com ou sem autenticação
+ */
+function getGitHubHeaders() {
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+  };
+  
+  const token = getGitHubToken();
+  if (token) {
+    headers['Authorization'] = `token ${token}`;
+  }
+  
+  return headers;
+}
+
 /**
  * Extrai owner e repo de uma URL do GitHub
  * @param {string} url - URL do repositório GitHub
@@ -41,9 +81,14 @@ export function parseGitHubUrl(url) {
  */
 export async function fetchGitHubRepo(owner, repo) {
   try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: getGitHubHeaders()
+    });
     
     if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error('Limite de requisições atingido. Configure um token do GitHub nas configurações.');
+      }
       throw new Error(`Erro ${response.status}: Repositório não encontrado`);
     }
     
@@ -82,7 +127,9 @@ export async function fetchGitHubRepo(owner, repo) {
  */
 export async function fetchGitHubLanguages(owner, repo) {
   try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/languages`);
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/languages`, {
+      headers: getGitHubHeaders()
+    });
     
     if (!response.ok) {
       return [];
@@ -150,10 +197,16 @@ export async function fetchUserRepositories(username) {
     // Busca paginada (até 100 repos por página)
     while (hasMore) {
       const response = await fetch(
-        `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&sort=updated`
+        `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&sort=updated`,
+        {
+          headers: getGitHubHeaders()
+        }
       );
 
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Limite de requisições atingido. Configure um token do GitHub nas configurações.');
+        }
         throw new Error(`Erro ${response.status}: Usuário não encontrado`);
       }
 

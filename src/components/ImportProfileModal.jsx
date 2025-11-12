@@ -9,9 +9,23 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
   const [repositories, setRepositories] = useState([]);
   const [selectedRepos, setSelectedRepos] = useState([]);
 
+  // Extrai o nome de usuário de uma URL do GitHub ou retorna o nome diretamente
+  const extractUsername = (input) => {
+    const trimmed = input.trim();
+    
+    // Se for uma URL do GitHub
+    if (trimmed.includes('github.com/')) {
+      const match = trimmed.match(/github\.com\/([^\/\?#]+)/);
+      return match ? match[1] : trimmed;
+    }
+    
+    // Se for apenas o nome de usuário
+    return trimmed;
+  };
+
   const handleSearch = async () => {
     if (!username.trim()) {
-      setError('Digite um nome de usuário do GitHub');
+      setError('Digite um nome de usuário ou URL do perfil do GitHub');
       return;
     }
 
@@ -21,7 +35,8 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
     setSelectedRepos([]);
 
     try {
-      const repos = await fetchUserRepositories(username.trim());
+      const extractedUsername = extractUsername(username);
+      const repos = await fetchUserRepositories(extractedUsername);
       
       if (repos.length === 0) {
         setError('Nenhum repositório público encontrado');
@@ -131,7 +146,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
           {/* Busca de usuário */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Nome de usuário do GitHub
+              Nome de usuário ou URL do perfil
             </label>
             <div className="flex gap-3">
               <input
@@ -139,7 +154,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Ex: Felipe-Alcantara"
+                placeholder="Ex: Felipe-Alcantara ou https://github.com/Felipe-Alcantara"
                 className="flex-1 px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
                 disabled={loading}
               />
@@ -159,7 +174,14 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
               </button>
             </div>
             {error && (
-              <p className="text-red-400 text-sm mt-2">{error}</p>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
+                <p className="text-red-400 text-sm">{error}</p>
+                {error.includes('Limite de requisições') && (
+                  <p className="text-gray-400 text-xs mt-1">
+                    Clique no botão de configurações (⚙️) no topo da página para adicionar um token do GitHub.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 

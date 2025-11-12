@@ -3,12 +3,13 @@ import { useState, useMemo } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Settings } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import ImportProfileModal from '../components/ImportProfileModal';
+import GitHubTokenModal from '../components/GitHubTokenModal';
 import { getAllTags } from '../utils/tags';
 import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
@@ -16,6 +17,7 @@ export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
@@ -298,6 +300,13 @@ export default function Home() {
               </div>
 
               <div className="flex gap-3">
+                <button
+                  onClick={() => setIsTokenModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  title="Configurar token do GitHub"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
                 <ImportExportButtons onImportComplete={handleImportComplete} />
                 <button
                   onClick={() => setIsModalOpen(true)}
@@ -631,6 +640,12 @@ export default function Home() {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         onImport={handleSaveProject}
+      />
+
+      {/* Modal de Token do GitHub */}
+      <GitHubTokenModal
+        isOpen={isTokenModalOpen}
+        onClose={() => setIsTokenModalOpen(false)}
       />
     </div>
   );
