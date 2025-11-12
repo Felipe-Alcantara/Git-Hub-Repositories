@@ -547,7 +547,7 @@ export default function Home() {
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
               : viewMode === 'list'
               ? 'space-y-4'
-              : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-[calc(100vh-250px)]'
+              : 'flex gap-4 w-full h-[calc(100vh-250px)]'
           }>
             {viewMode === 'kanban' ? (
               // Visualização Kanban - Colunas dinâmicas baseadas em grupos com reordenação
@@ -681,19 +681,21 @@ function SortableKanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={groups} strategy={rectSortingStrategy}>
-        {groups.map(group => (
-          <SortableKanbanColumn
-            key={group}
-            group={group}
-            title={group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-            projects={filteredProjects.filter(p => p.group === group)}
-            selectedProjects={selectedProjects}
-            onToggleSelect={toggleProjectSelection}
-            onDelete={handleDeleteProject}
-            activeItem={activeItem}
-            onDeleteGroup={onDeleteGroup} // Passar para a coluna
-          />
-        ))}
+        <div className="flex gap-4 w-full">
+          {groups.map(group => (
+            <SortableKanbanColumn
+              key={group}
+              group={group}
+              title={group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              projects={filteredProjects.filter(p => p.group === group)}
+              selectedProjects={selectedProjects}
+              onToggleSelect={toggleProjectSelection}
+              onDelete={handleDeleteProject}
+              activeItem={activeItem}
+              onDeleteGroup={onDeleteGroup} // Passar para a coluna
+            />
+          ))}
+        </div>
       </SortableContext>
 
       <DragOverlay dropAnimation={{
@@ -736,6 +738,8 @@ function SortableKanbanColumn({
   const style = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
+    flex: '1 1 0',
+    minWidth: '280px',
   };
 
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
@@ -777,7 +781,7 @@ function KanbanColumn({
 
   return (
     <div 
-      className={`bg-dark-surface border rounded-lg p-4 h-[680px] flex flex-col
+      className={`bg-dark-surface border rounded-lg p-4 h-[680px] flex flex-col w-full
         transition-all duration-300 ease-in-out
         ${isOver ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/20' : 'border-dark-border'}
         ${isDraggingColumn ? 'opacity-50' : ''}
