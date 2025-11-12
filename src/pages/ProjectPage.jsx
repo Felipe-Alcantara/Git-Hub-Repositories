@@ -77,7 +77,7 @@ export default function ProjectPage() {
   return (
     <div className="min-h-screen bg-dark-bg">
       {/* Header */}
-      <header className="bg-dark-surface border-b border-dark-border sticky top-0 z-40">
+      <header className="bg-dark-surface border-b border-dark-border sticky top-0 inset-x-0 z-50 w-full">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

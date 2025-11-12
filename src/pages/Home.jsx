@@ -282,8 +282,8 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="bg-dark-surface border-b border-dark-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <header className="bg-dark-surface border-b border-dark-border sticky top-0 inset-x-0 z-50 w-full">
+        <div className={viewMode === 'kanban' ? 'w-full px-4 sm:px-6 lg:px-8 py-6' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'}>
           <div className="flex flex-col gap-4">
             {/* Título e ações principais */}
             <div className="flex items-center justify-between">
@@ -522,7 +522,7 @@ export default function Home() {
       )}
 
       {/* Conteúdo principal */}
-      <main className={viewMode === 'kanban' ? 'w-full px-4 sm:px-6 lg:px-8 py-8' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
+      <main className={viewMode === 'kanban' ? 'w-full py-8 overflow-x-auto' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
         {filteredProjects.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-gray-400 text-lg mb-4">
@@ -547,7 +547,7 @@ export default function Home() {
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
               : viewMode === 'list'
               ? 'space-y-4'
-              : 'flex gap-4 w-full h-[calc(100vh-250px)]'
+              : 'flex gap-4 h-[calc(100vh-250px)] px-4 sm:px-6 lg:px-8'
           }>
             {viewMode === 'kanban' ? (
               // Visualização Kanban - Colunas dinâmicas baseadas em grupos com reordenação
@@ -681,7 +681,7 @@ function SortableKanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={groups} strategy={rectSortingStrategy}>
-        <div className="flex gap-4 w-full">
+        <div className="flex gap-4">
           {groups.map(group => (
             <SortableKanbanColumn
               key={group}
