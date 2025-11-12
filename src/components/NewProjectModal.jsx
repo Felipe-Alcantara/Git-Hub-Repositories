@@ -14,6 +14,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     complexity: 'simple',
     isCompleted: false,
     repoCreatedAt: null,
+    owner: '',
     group: 'backlog',
   });
 
@@ -41,6 +42,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       complexity: 'simple',
       isCompleted: false,
       repoCreatedAt: null,
+      owner: '',
       group: 'backlog',
     });
     setError('');
@@ -71,6 +73,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
         webUrl: repoData.webUrl || prev.webUrl,
         downloadUrl: repoData.downloadUrl || prev.downloadUrl,
         repoCreatedAt: repoData.repoCreatedAt || null, // Data de criação do repo
+        owner: repoData.owner || prev.owner, // Nome do autor/dono do repositório
       }));
     } catch (err) {
       console.error('Erro ao buscar do GitHub:', err);

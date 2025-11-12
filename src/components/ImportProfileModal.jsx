@@ -62,13 +62,13 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
       
       // Importa cada repositório selecionado
       for (const repo of reposToImport) {
-        const owner = username.trim();
+        const extractedUsername = extractUsername(username);
         
         // Busca linguagens do repositório
-        const languages = await fetchGitHubLanguages(owner, repo.name);
+        const languages = await fetchGitHubLanguages(extractedUsername, repo.name);
         
         // Detecta GitHub Pages
-        const pagesUrl = repo.homepage || `https://${owner}.github.io/${repo.name}/`;
+        const pagesUrl = repo.homepage || `https://${extractedUsername}.github.io/${repo.name}/`;
         
         const projectData = {
           name: repo.name,
@@ -78,6 +78,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
           webUrl: pagesUrl,
           downloadUrl: `${repo.repoUrl}/archive/refs/heads/${repo.defaultBranch}.zip`,
           repoCreatedAt: repo.createdAt,
+          owner: extractedUsername, // Nome do autor/dono do repositório
           complexity: 'medium', // Pode ajustar baseado no tamanho
           isCompleted: false,
           group: 'backlog',

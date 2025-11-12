@@ -97,6 +97,22 @@ export default function ProjectCard({
           </h3>
         </div>
 
+        {/* Nome do autor/owner */}
+        {project.owner && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="text-xs text-gray-500">por</span>
+            <a
+              href={`https://github.com/${project.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              @{project.owner}
+            </a>
+          </div>
+        )}
+
         {/* Descrição compacta */}
         {project.description && (
           <p className="text-xs text-gray-400 mb-2">
@@ -197,6 +213,22 @@ export default function ProjectCard({
             <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors break-normal line-clamp-2 mb-2">
               {project.name || 'Projeto sem nome'}
             </h3>
+
+            {/* Nome do autor/owner */}
+            {project.owner && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-500">por</span>
+                <a
+                  href={`https://github.com/${project.owner}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors hover:underline"
+                >
+                  @{project.owner}
+                </a>
+              </div>
+            )}
 
             {/* Descrição - ocupa metade do card */}
             {project.description && (
@@ -329,6 +361,22 @@ export default function ProjectCard({
             {project.name || 'Projeto sem nome'}
           </h3>
         </div>
+
+        {/* Nome do autor/owner */}
+        {project.owner && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-gray-500">por</span>
+            <a
+              href={`https://github.com/${project.owner}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors hover:underline"
+            >
+              @{project.owner}
+            </a>
+          </div>
+        )}
 
         {/* Linha divisória após título */}
         <div className="border-t border-dark-border mb-4"></div>

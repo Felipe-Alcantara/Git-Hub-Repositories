@@ -180,6 +180,7 @@ export async function fetchCompleteGitHubInfo(url) {
     webUrl: repoInfo.data.homepage || pagesUrl || '',
     downloadUrl: `${repoInfo.data.repoUrl}/archive/refs/heads/${repoInfo.data.defaultBranch}.zip`,
     repoCreatedAt: repoInfo.data.createdAt, // Data de criação do repositório
+    owner: owner, // Nome do autor/dono do repositório
   };
 }
 
