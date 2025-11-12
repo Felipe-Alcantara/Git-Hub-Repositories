@@ -521,7 +521,7 @@ export default function Home() {
       </header>
 
       {/* Conteúdo principal */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className={viewMode === 'kanban' ? 'w-full px-4 sm:px-6 lg:px-8 py-8' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
         {filteredProjects.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-gray-400 text-lg mb-4">
@@ -546,7 +546,7 @@ export default function Home() {
               ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
               : viewMode === 'list'
               ? 'space-y-4'
-              : 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6'
+              : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-[calc(100vh-250px)]'
           }>
             {viewMode === 'kanban' ? (
               // Visualização Kanban - Colunas dinâmicas baseadas em grupos
@@ -662,27 +662,24 @@ function KanbanColumn({
 }) {
   return (
     <div 
-      className={`bg-dark-surface border rounded-lg p-4 min-h-[300px]
+      className={`bg-dark-surface border rounded-lg p-4 min-h-[500px] flex flex-col
         transition-all duration-300 ease-in-out
-        ${isDragOver ? 'border-blue-500 bg-blue-500/10 ring-4 ring-blue-500/30 scale-105 shadow-2xl shadow-blue-500/20' : 'border-dark-border'}
+        ${isDragOver ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/20' : 'border-dark-border'}
       `}
-      style={{
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: isDragOver ? 'scale(1.02)' : 'scale(1)'
-      }}
       onDragOver={(e) => onDragOver(e, columnType)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, columnType)}
     >
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center justify-between">
+      <h3 className="text-base font-semibold text-white mb-4 flex items-center justify-between pb-3 border-b border-dark-border">
         {title}
-        <span className="text-sm text-gray-400 font-normal">{projects.length}</span>
+        <span className="text-xs text-gray-400 font-normal bg-dark-border px-2 py-0.5 rounded-full">{projects.length}</span>
       </h3>
-      <div className="space-y-4">
+      <div className="space-y-3 overflow-y-auto flex-1 pr-2 pt-1" style={{ maxHeight: 'calc(100vh - 340px)' }}>
         {projects.map(project => (
           <ProjectCard 
             key={project.id} 
             project={project}
+            viewMode="kanban"
             isSelected={selectedProjects.includes(project.id)}
             onToggleSelect={onToggleSelect}
             onDelete={onDelete}

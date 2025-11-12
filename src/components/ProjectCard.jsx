@@ -50,6 +50,104 @@ export default function ProjectCard({
     }
   };
 
+  // Layout compacto estilo post-it para modo Kanban
+  if (viewMode === 'kanban') {
+    return (
+      <div 
+        onClick={handleCardClick}
+        draggable={draggable}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
+        className={`relative bg-dark-surface border rounded-md p-3 group cursor-pointer
+          transition-all duration-200 ease-in-out
+          ${isSelected ? 'border-blue-500 ring-1 ring-blue-500/30 shadow-md shadow-blue-500/10' : 'border-dark-border hover:border-blue-500/50 hover:shadow-sm'}
+          ${isDragging ? 'opacity-50 rotate-3 scale-95' : ''}
+          ${isDragOver ? 'border-t-2 border-t-blue-500' : ''}
+        `}
+        style={{
+          cursor: draggable ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
+        }}
+      >
+        {/* Header compacto */}
+        <div className="flex items-start gap-2 mb-2">
+          <button
+            onClick={handleCheckboxClick}
+            className={`flex-shrink-0 transition-all ${
+              isSelected 
+                ? 'text-blue-400' 
+                : project.isCompleted 
+                ? 'text-green-400' 
+                : 'text-gray-500'
+            }`}
+          >
+            {isSelected ? (
+              <CheckCircle2 className="w-4 h-4 fill-current" />
+            ) : project.isCompleted ? (
+              <CheckCircle2 className="w-4 h-4" />
+            ) : (
+              <Circle className="w-4 h-4" />
+            )}
+          </button>
+          
+          <h3 className="text-sm font-semibold text-white flex-1 line-clamp-2 leading-tight">
+            {project.name || 'Projeto sem nome'}
+          </h3>
+        </div>
+
+        {/* Descrição compacta */}
+        {project.description && (
+          <p className="text-xs text-gray-400 mb-2 line-clamp-2">
+            {project.description}
+          </p>
+        )}
+
+        {/* Linguagens (max 3 badges) */}
+        {project.languages && project.languages.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {project.languages.slice(0, 3).map((lang, idx) => (
+              <span 
+                key={idx}
+                className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30"
+              >
+                {lang}
+              </span>
+            ))}
+            {project.languages.length > 3 && (
+              <span className="px-1.5 py-0.5 bg-gray-500/10 text-gray-400 text-xs rounded">
+                +{project.languages.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Footer compacto */}
+        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dark-border">
+          <div className="flex items-center gap-2">
+            <span className={`px-1.5 py-0.5 rounded text-xs ${complexityColors[project.complexity]}`}>
+              {complexityLabels[project.complexity].charAt(0)}
+            </span>
+            {totalLines > 0 && (
+              <span>{(totalLines / 1000).toFixed(0)}k</span>
+            )}
+          </div>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(project.id);
+            }}
+            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Layout compacto para modo lista (estilo GitHub)
   if (viewMode === 'list') {
     return (
