@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Trash2, Download, Undo, Redo, Pen, Eraser, Circle, Square, Minus } from 'lucide-react';
 
 export default function DrawingCanvas({ initialData, onSave }) {
@@ -61,7 +61,7 @@ export default function DrawingCanvas({ initialData, onSave }) {
     onSave(imageData);
   };
 
-  const undo = () => {
+  const undo = useCallback(() => {
     if (historyStep > 0) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
@@ -76,9 +76,9 @@ export default function DrawingCanvas({ initialData, onSave }) {
       setHistoryStep(newStep);
       onSave(history[newStep]);
     }
-  };
+  }, [history, historyStep, onSave]);
 
-  const redo = () => {
+  const redo = useCallback(() => {
     if (historyStep < history.length - 1) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
@@ -93,7 +93,26 @@ export default function DrawingCanvas({ initialData, onSave }) {
       setHistoryStep(newStep);
       onSave(history[newStep]);
     }
-  };
+  }, [history, historyStep, onSave]);
+
+  // Efeito para adicionar atalhos de teclado
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      if (e.ctrlKey && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [undo, redo]);
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
