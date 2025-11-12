@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Settings } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Settings, User } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
@@ -24,6 +24,7 @@ export default function Home() {
   const [filterComplexity, setFilterComplexity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTags, setFilterTags] = useState([]); // Novo filtro de tags
+  const [filterOwners, setFilterOwners] = useState([]); // Novo filtro de autores/criadores
   const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity, custom
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
@@ -41,6 +42,17 @@ export default function Home() {
       }
     });
     return Array.from(tagsSet).sort();
+  }, [projects]);
+
+  // Obter todos os autores/criadores dos projetos
+  const usedOwners = useMemo(() => {
+    const ownersSet = new Set();
+    projects.forEach(p => {
+      if (p.owner) {
+        ownersSet.add(p.owner);
+      }
+    });
+    return Array.from(ownersSet).sort();
   }, [projects]);
 
   const kanbanGroups = useMemo(() => {
@@ -94,6 +106,13 @@ export default function Home() {
       );
     }
 
+    // Filtro de autores/criadores
+    if (filterOwners.length > 0) {
+      filtered = filtered.filter(p => 
+        p.owner && filterOwners.includes(p.owner)
+      );
+    }
+
     // Ordenação
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -128,13 +147,21 @@ export default function Home() {
     });
 
     return filtered;
-  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, sortBy, customOrder]);
+  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, filterOwners, sortBy, customOrder]);
 
   const toggleTagFilter = (tag) => {
     setFilterTags(prev => 
       prev.includes(tag) 
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
+    );
+  };
+
+  const toggleOwnerFilter = (owner) => {
+    setFilterOwners(prev => 
+      prev.includes(owner) 
+        ? prev.filter(o => o !== owner)
+        : [...prev, owner]
     );
   };
 
@@ -506,6 +533,41 @@ export default function Home() {
                         className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
                       >
                         Limpar filtros de tecnologias
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Filtrar por autores/criadores */}
+                {usedOwners.length > 0 && (
+                  <div className="w-full">
+                    <label className="block text-sm text-gray-400 mb-2">
+                      <User className="w-4 h-4 inline mr-1" />
+                      Filtrar por Autor/Criador
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {usedOwners.map(owner => (
+                        <button
+                          key={owner}
+                          onClick={() => toggleOwnerFilter(owner)}
+                          className={`px-3 py-1 rounded-lg text-sm transition-colors flex items-center gap-1 ${
+                            filterOwners.includes(owner)
+                              ? 'bg-green-600 text-white'
+                              : 'bg-dark-surface border border-dark-border text-gray-300 hover:bg-dark-hover'
+                          }`}
+                        >
+                          <User className="w-3 h-3" />
+                          {owner}
+                          {filterOwners.includes(owner) && <X className="w-3 h-3 ml-1" />}
+                        </button>
+                      ))}
+                    </div>
+                    {filterOwners.length > 0 && (
+                      <button
+                        onClick={() => setFilterOwners([])}
+                        className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
+                      >
+                        Limpar filtros de autores
                       </button>
                     )}
                   </div>
