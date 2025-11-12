@@ -184,12 +184,18 @@ export default function Home() {
   const handleDragOver = (e, projectId) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (projectId !== draggedProject) {
+    
+    // Só atualiza se mudou de card alvo e não é o próprio card sendo arrastado
+    if (projectId !== draggedProject && projectId !== dragOverProject) {
       setDragOverProject(projectId);
     }
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e) => {
+    // Evita limpar quando o mouse está apenas saindo para entrar em um filho
+    if (e.currentTarget.contains(e.relatedTarget)) {
+      return;
+    }
     setDragOverProject(null);
   };
 
@@ -656,9 +662,14 @@ function KanbanColumn({
 }) {
   return (
     <div 
-      className={`bg-dark-surface border rounded-lg p-4 transition-all ${
-        isDragOver ? 'border-blue-500 bg-blue-500/10' : 'border-dark-border'
-      }`}
+      className={`bg-dark-surface border rounded-lg p-4 min-h-[300px]
+        transition-all duration-300 ease-in-out
+        ${isDragOver ? 'border-blue-500 bg-blue-500/10 ring-4 ring-blue-500/30 scale-105 shadow-2xl shadow-blue-500/20' : 'border-dark-border'}
+      `}
+      style={{
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isDragOver ? 'scale(1.02)' : 'scale(1)'
+      }}
       onDragOver={(e) => onDragOver(e, columnType)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, columnType)}

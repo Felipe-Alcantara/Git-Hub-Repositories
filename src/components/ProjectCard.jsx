@@ -58,11 +58,16 @@ export default function ProjectCard({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      className={`bg-dark-surface border rounded-lg p-5 transition-all duration-200 group cursor-pointer
+      className={`relative bg-dark-surface border rounded-lg p-5 group cursor-pointer
+        transition-all duration-300 ease-in-out
         ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-dark-border'}
-        ${isDragging ? 'opacity-30 scale-95' : 'hover:border-blue-500/50'}
-        ${isDragOver ? 'border-green-500 ring-2 ring-green-500/50 scale-105' : ''}
+        ${isDragging ? 'opacity-40 scale-95 rotate-2 shadow-2xl' : 'hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1'}
+        ${isDragOver ? 'border-t-4 border-t-blue-500 shadow-lg shadow-blue-500/30' : ''}
       `}
+      style={{
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: draggable ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
+      }}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
