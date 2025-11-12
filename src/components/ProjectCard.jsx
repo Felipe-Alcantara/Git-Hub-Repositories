@@ -194,7 +194,7 @@ export default function ProjectCard({
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
             {/* Título */}
-            <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors break-words mb-2">
+            <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors break-normal line-clamp-2 mb-2">
               {project.name || 'Projeto sem nome'}
             </h3>
 
@@ -325,7 +325,7 @@ export default function ProjectCard({
             )}
           </button>
           
-          <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-words pt-6">
+          <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-normal line-clamp-2 pt-6">
             {project.name || 'Projeto sem nome'}
           </h3>
         </div>
