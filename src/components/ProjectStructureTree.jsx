@@ -259,7 +259,32 @@ function TreeNode({
 }
 
 export default function ProjectStructureTree({ initialData, onSave }) {
-  const [tree, setTree] = useState(initialData || [
+  // Função para ordenar a árvore: pastas primeiro, depois alfabeticamente
+  const sortTree = (nodes) => {
+    if (!nodes || nodes.length === 0) return nodes;
+    
+    const sorted = [...nodes].sort((a, b) => {
+      // Pastas primeiro
+      if (a.type === 'folder' && b.type !== 'folder') return -1;
+      if (a.type !== 'folder' && b.type === 'folder') return 1;
+      
+      // Depois alfabeticamente (case-insensitive)
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+    
+    // Ordena recursivamente os filhos de cada pasta
+    return sorted.map(node => {
+      if (node.type === 'folder' && node.children) {
+        return {
+          ...node,
+          children: sortTree(node.children)
+        };
+      }
+      return node;
+    });
+  };
+
+  const [tree, setTree] = useState(sortTree(initialData || [
     {
       id: '1',
       name: 'src',
@@ -279,7 +304,7 @@ export default function ProjectStructureTree({ initialData, onSave }) {
     },
     { id: '5', name: 'package.json', type: 'file' },
     { id: '6', name: 'README.md', type: 'file' },
-  ]);
+  ]));
 
   const [activeId, setActiveId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -297,9 +322,10 @@ export default function ProjectStructureTree({ initialData, onSave }) {
 
   // Salva automaticamente quando a árvore muda
   const updateTree = (newTree) => {
-    setTree(newTree);
-    onSave(newTree);
-    console.log('[ProjectStructureTree] Árvore atualizada e salva');
+    const sortedTree = sortTree(newTree);
+    setTree(sortedTree);
+    onSave(sortedTree);
+    console.log('[ProjectStructureTree] Árvore atualizada, ordenada e salva');
   };
 
   // Função para encontrar um nó por ID
