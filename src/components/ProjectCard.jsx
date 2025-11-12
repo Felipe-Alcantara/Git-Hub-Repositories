@@ -95,40 +95,32 @@ export default function ProjectCard({
 
           {/* Conteúdo principal */}
           <div className="flex-1 min-w-0">
-            {/* Título e complexidade */}
-            <div className="flex items-start gap-3 mb-2">
-              <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors break-words flex-1">
-                {project.name || 'Projeto sem nome'}
-              </h3>
-              <span className={`flex-shrink-0 px-2 py-0.5 text-xs rounded border ${complexityColors[project.complexity]}`}>
-                {complexityLabels[project.complexity]}
-              </span>
-            </div>
+            {/* Título */}
+            <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors break-words mb-2">
+              {project.name || 'Projeto sem nome'}
+            </h3>
 
-            {/* Descrição */}
+            {/* Descrição - ocupa metade do card */}
             {project.description && (
-              <p className="text-gray-400 text-sm mb-2 line-clamp-1">
+              <p className="text-gray-400 text-sm mb-2 line-clamp-3 max-w-[50%]">
                 {project.description}
               </p>
             )}
 
+            {/* Stack completa - todas as linguagens visíveis */}
+            {project.languages && project.languages.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {project.languages.map((lang, idx) => (
+                  <span key={idx} className="flex items-center gap-1 text-xs text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                    {lang}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Metadados inline */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400">
-              {/* Linguagens */}
-              {project.languages && project.languages.length > 0 && (
-                <div className="flex items-center gap-2">
-                  {project.languages.slice(0, 3).map((lang, idx) => (
-                    <span key={idx} className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                      {lang}
-                    </span>
-                  ))}
-                  {project.languages.length > 3 && (
-                    <span className="text-gray-500">+{project.languages.length - 3}</span>
-                  )}
-                </div>
-              )}
-              
               {/* Data */}
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
@@ -142,39 +134,47 @@ export default function ProjectCard({
                   <span>{totalLines.toLocaleString('pt-BR')} linhas</span>
                 </div>
               )}
-
-              {/* Grupo */}
-              {project.group && (
-                <span className="px-2 py-0.5 bg-green-500/10 text-green-400 rounded border border-green-500/30">
-                  📋 {project.group}
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Ações lado direito */}
-          <div className="flex-shrink-0 flex items-center gap-2">
-            {project.repoUrl && (
-              <a 
-                href={project.repoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
-                title="Repositório"
+          {/* Ações e badges lado direito */}
+          <div className="flex-shrink-0 flex flex-col items-end gap-2">
+            {/* Ícones de ação */}
+            <div className="flex items-center gap-2">
+              {project.repoUrl && (
+                <a 
+                  href={project.repoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                  title="Repositório"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(project.id);
+                }}
+                className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
+                title="Deletar"
               >
-                <ExternalLink className="w-4 h-4" />
-              </a>
+                <span className="text-xs">×</span>
+              </button>
+            </div>
+
+            {/* Complexidade */}
+            <span className={`px-2 py-0.5 text-xs rounded border ${complexityColors[project.complexity]}`}>
+              {complexityLabels[project.complexity]}
+            </span>
+
+            {/* Grupo Kanban */}
+            {project.group && (
+              <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/30">
+                📋 {project.group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </span>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(project.id);
-              }}
-              className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
-              title="Deletar"
-            >
-              <span className="text-xs">×</span>
-            </button>
           </div>
         </div>
       </div>
