@@ -15,6 +15,7 @@ export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
+  const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
   const [filterComplexity, setFilterComplexity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -363,6 +364,21 @@ export default function Home() {
                   </button>
                 )}
 
+                {viewMode === 'grid' && (
+                  <select
+                    value={gridColumns}
+                    onChange={(e) => setGridColumns(Number(e.target.value))}
+                    className="px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                    title="Colunas por linha"
+                  >
+                    <option value={2}>2 colunas</option>
+                    <option value={3}>3 colunas</option>
+                    <option value={4}>4 colunas</option>
+                    <option value={5}>5 colunas</option>
+                    <option value={6}>6 colunas</option>
+                  </select>
+                )}
+
                 <div className="flex bg-dark-bg border border-dark-border rounded-lg">
                   <button
                     onClick={() => setViewMode('grid')}
@@ -544,7 +560,13 @@ export default function Home() {
         ) : (
           <div className={
             viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+              ? `grid gap-6 ${
+                  gridColumns === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                  gridColumns === 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+                  gridColumns === 4 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' :
+                  gridColumns === 5 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5' :
+                  'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'
+                }`
               : viewMode === 'list'
               ? 'space-y-4'
               : 'flex gap-4 h-[calc(100vh-250px)] px-4 sm:px-6 lg:px-8'
