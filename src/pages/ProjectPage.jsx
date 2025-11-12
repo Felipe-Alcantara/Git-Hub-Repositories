@@ -23,6 +23,12 @@ export default function ProjectPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState(null);
   const [activeSection, setActiveSection] = useState('ideas');
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    // Carrega a largura salva ou usa 320px como padrão
+    const saved = localStorage.getItem('projectPageSidebarWidth');
+    return saved ? parseInt(saved, 10) : 320;
+  });
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     const loadedProject = getProjectById(id);
@@ -57,6 +63,46 @@ export default function ProjectPage() {
     }));
   };
 
+  const handleMouseDown = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      
+      const newWidth = e.clientX;
+      // Limita a largura entre 250px e 600px
+      if (newWidth >= 250 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+  // Salva a largura da sidebar no localStorage sempre que mudar
+  useEffect(() => {
+    localStorage.setItem('projectPageSidebarWidth', sidebarWidth.toString());
+  }, [sidebarWidth]);
+
   const toggleCompleted = () => {
     const updated = { ...editedProject, isCompleted: !editedProject.isCompleted };
     setEditedProject(updated);
@@ -75,9 +121,9 @@ export default function ProjectPage() {
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
 
   return (
-    <div className="min-h-screen bg-dark-bg">
+    <div className="h-screen bg-dark-bg flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-dark-surface border-b border-dark-border sticky top-0 inset-x-0 z-50 w-full">
+      <header className="bg-dark-surface border-b border-dark-border z-50 w-full flex-shrink-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -135,12 +181,15 @@ export default function ProjectPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sidebar - Informações básicas */}
-          <div className="lg:col-span-1 space-y-6">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar fixa à esquerda */}
+        <aside 
+          className="flex-shrink-0 border-r border-dark-border bg-dark-surface overflow-y-auto overflow-x-hidden relative"
+          style={{ width: `${sidebarWidth}px` }}
+        >
+          <div className="p-6 space-y-6">
             {/* Card de informações */}
-            <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
+            <div className="bg-dark-bg border border-dark-border rounded-lg p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Informações</h2>
               
               <div className="space-y-4">
@@ -389,12 +438,23 @@ export default function ProjectPage() {
             </div>
           </div>
 
-          {/* Área principal - Seções detalhadas */}
-          <div className="lg:col-span-2">
-            <div className="bg-dark-surface border border-dark-border rounded-lg overflow-hidden">
+          {/* Handle de resize */}
+          <div
+            onMouseDown={handleMouseDown}
+            className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors group"
+            style={{ transform: 'translateX(50%)' }}
+          >
+            <div className="absolute inset-y-0 -left-1 -right-1" />
+          </div>
+        </aside>
+
+        {/* Área principal - ocupa o resto da tela */}
+        <main className="flex-1 overflow-x-hidden overflow-y-hidden flex flex-col">
+          <div className="p-6 flex-1 flex flex-col overflow-hidden">
+            <div className="bg-dark-surface border border-dark-border rounded-lg overflow-hidden flex-1 flex flex-col">
               {/* Tabs de seções */}
-              <div className="border-b border-dark-border overflow-x-auto">
-                <div className="flex">
+              <div className="border-b border-dark-border">
+                <div className="flex flex-wrap">
                   {sections.map(section => {
                     const Icon = section.icon;
                     return (
@@ -416,13 +476,13 @@ export default function ProjectPage() {
               </div>
 
               {/* Conteúdo da seção ativa */}
-              <div className="p-6">
+              <div className="p-6 flex-1 overflow-hidden">
                 {sections.map(section => {
                   if (activeSection !== section.key) return null;
                   
                   const Icon = section.icon;
                   return (
-                    <div key={section.key}>
+                    <div key={section.key} className="h-full flex flex-col">
                       <div className="flex items-center gap-3 mb-4">
                         <Icon className="w-6 h-6 text-blue-400" />
                         <h3 className="text-xl font-semibold text-white">{section.label}</h3>
@@ -432,8 +492,7 @@ export default function ProjectPage() {
                         value={editedProject.details[section.key] || ''}
                         onChange={(e) => handleDetailChange(section.key, e.target.value)}
                         placeholder={section.placeholder}
-                        rows={15}
-                        className="w-full px-4 py-3 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none font-mono text-sm"
+                        className="w-full flex-1 px-4 py-3 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none font-mono text-sm"
                       />
                     </div>
                   );
@@ -441,7 +500,7 @@ export default function ProjectPage() {
               </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
