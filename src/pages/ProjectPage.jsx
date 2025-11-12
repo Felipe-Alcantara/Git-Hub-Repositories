@@ -52,6 +52,12 @@ export default function ProjectPage() {
   };
 
   const handleDetailChange = (key, value) => {
+    console.log('[ProjectPage] handleDetailChange chamado:', {
+      key,
+      valueSize: value?.length || 0,
+      projectId: editedProject?.id
+    });
+    
     setEditedProject(prev => ({
       ...prev,
       details: {
@@ -110,19 +116,48 @@ export default function ProjectPage() {
 
   // Salva automaticamente os detalhes (incluindo sketches) após mudanças
   useEffect(() => {
-    if (!editedProject || !project) return;
+    if (!editedProject || !project) {
+      console.log('[ProjectPage] Salvamento automático: projeto não carregado');
+      return;
+    }
+    
+    // Verifica se o editedProject pertence ao projeto atual (pelo id)
+    if (editedProject.id !== id) {
+      console.log('[ProjectPage] Salvamento automático: ID não corresponde', {
+        editedId: editedProject.id,
+        currentId: id
+      });
+      return;
+    }
     
     // Evita salvar na primeira renderização
-    if (JSON.stringify(editedProject.details) === JSON.stringify(project.details)) return;
+    if (JSON.stringify(editedProject.details) === JSON.stringify(project.details)) {
+      console.log('[ProjectPage] Salvamento automático: sem mudanças');
+      return;
+    }
+
+    console.log('[ProjectPage] Salvamento automático agendado para 1 segundo', {
+      projectId: id,
+      projectName: editedProject.name
+    });
 
     // Debounce: salva após 1 segundo sem mudanças
     const timeoutId = setTimeout(() => {
+      console.log('[ProjectPage] Salvando automaticamente...', {
+        projectId: id,
+        projectName: editedProject.name,
+        sketchesSize: editedProject.details.sketches?.length || 0
+      });
       updateProject(id, editedProject);
       setProject(editedProject);
+      console.log('[ProjectPage] ✅ Projeto salvo com sucesso!');
     }, 1000);
 
-    return () => clearTimeout(timeoutId);
-  }, [editedProject?.details, id]);
+    return () => {
+      console.log('[ProjectPage] Salvamento automático cancelado (cleanup)');
+      clearTimeout(timeoutId);
+    };
+  }, [editedProject?.details, id, editedProject?.id, project]);
 
   const toggleCompleted = () => {
     const updated = { ...editedProject, isCompleted: !editedProject.isCompleted };

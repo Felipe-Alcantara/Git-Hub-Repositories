@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Trash2, Download, Undo, Redo, Pen, Eraser, Circle, Square, Minus } from 'lucide-react';
+import { Trash2, Download, Undo, Redo, Pen, Eraser, Circle, Square, Minus, Save } from 'lucide-react';
 
 export default function DrawingCanvas({ initialData, onSave }) {
   const canvasRef = useRef(null);
@@ -14,7 +14,15 @@ export default function DrawingCanvas({ initialData, onSave }) {
   // Carregar dados iniciais do canvas
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.log('[DrawingCanvas] useEffect: Canvas não encontrado');
+      return;
+    }
+
+    console.log('[DrawingCanvas] useEffect: Iniciando carregamento', {
+      hasInitialData: !!initialData,
+      dataSize: initialData?.length || 0
+    });
 
     const ctx = canvas.getContext('2d');
     
@@ -22,6 +30,11 @@ export default function DrawingCanvas({ initialData, onSave }) {
     const container = canvas.parentElement;
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
+
+    console.log('[DrawingCanvas] Canvas configurado:', {
+      width: canvas.width,
+      height: canvas.height
+    });
 
     // Preencher com fundo escuro
     ctx.fillStyle = '#1a1a1a';
@@ -31,25 +44,36 @@ export default function DrawingCanvas({ initialData, onSave }) {
       const imageData = canvas.toDataURL();
       setHistory([imageData]);
       setHistoryStep(0);
+      console.log('[DrawingCanvas] Histórico inicializado');
     };
 
     // Carregar imagem salva se existir
     if (initialData && initialData.startsWith('data:image')) {
+      console.log('[DrawingCanvas] Carregando imagem salva...');
       const img = new Image();
       img.onload = () => {
+        console.log('[DrawingCanvas] Imagem carregada com sucesso');
         ctx.drawImage(img, 0, 0);
+        initHistory();
+      };
+      img.onerror = (error) => {
+        console.error('[DrawingCanvas] Erro ao carregar imagem:', error);
         initHistory();
       };
       img.src = initialData;
     } else {
+      console.log('[DrawingCanvas] Nenhuma imagem para carregar, iniciando vazio');
       initHistory();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Recarrega quando o initialData muda (quando troca de card)
+  }, [initialData]);
 
   const saveToHistory = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      console.log('[DrawingCanvas] saveToHistory: Canvas não encontrado');
+      return;
+    }
 
     const imageData = canvas.toDataURL();
     const newHistory = history.slice(0, historyStep + 1);
@@ -57,7 +81,28 @@ export default function DrawingCanvas({ initialData, onSave }) {
     setHistory(newHistory);
     setHistoryStep(newHistory.length - 1);
 
+    console.log('[DrawingCanvas] Salvando no histórico:', {
+      historyLength: newHistory.length,
+      historyStep: newHistory.length - 1,
+      dataSize: imageData.length
+    });
+
     // Salvar automaticamente
+    onSave(imageData);
+  };
+
+  const manualSave = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      console.log('[DrawingCanvas] manualSave: Canvas não encontrado');
+      return;
+    }
+
+    const imageData = canvas.toDataURL();
+    console.log('[DrawingCanvas] Salvamento manual acionado:', {
+      dataSize: imageData.length,
+      timestamp: new Date().toISOString()
+    });
     onSave(imageData);
   };
 
@@ -67,22 +112,7 @@ export default function DrawingCanvas({ initialData, onSave }) {
       const ctx = canvas.getContext('2d');
       const newStep = historyStep - 1;
       
-      const img = new Image();
-      img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-      };
-      img.src = history[newStep];
-      setHistoryStep(newStep);
-      onSave(history[newStep]);
-    }
-  }, [history, historyStep, onSave]);
-
-  const redo = useCallback(() => {
-    if (historyStep < history.length - 1) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      const newStep = historyStep + 1;
+      console.log('[DrawingCanvas] Undo:', { from: historyStep, to: newStep });
       
       const img = new Image();
       img.onload = () => {
@@ -92,6 +122,29 @@ export default function DrawingCanvas({ initialData, onSave }) {
       img.src = history[newStep];
       setHistoryStep(newStep);
       onSave(history[newStep]);
+    } else {
+      console.log('[DrawingCanvas] Undo: Não há mais ações para desfazer');
+    }
+  }, [history, historyStep, onSave]);
+
+  const redo = useCallback(() => {
+    if (historyStep < history.length - 1) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const newStep = historyStep + 1;
+      
+      console.log('[DrawingCanvas] Redo:', { from: historyStep, to: newStep });
+      
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = history[newStep];
+      setHistoryStep(newStep);
+      onSave(history[newStep]);
+    } else {
+      console.log('[DrawingCanvas] Redo: Não há mais ações para refazer');
     }
   }, [history, historyStep, onSave]);
 
@@ -300,10 +353,17 @@ export default function DrawingCanvas({ initialData, onSave }) {
         {/* Ações */}
         <div className="flex items-center gap-2">
           <button
+            onClick={manualSave}
+            className="p-2 bg-green-600 hover:bg-green-700 rounded text-white transition-colors"
+            title="Salvar desenho manualmente"
+          >
+            <Save className="w-4 h-4" />
+          </button>
+          <button
             onClick={undo}
             disabled={historyStep <= 0}
             className="p-2 bg-dark-bg rounded text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Desfazer"
+            title="Desfazer (Ctrl+Z)"
           >
             <Undo className="w-4 h-4" />
           </button>
@@ -311,7 +371,7 @@ export default function DrawingCanvas({ initialData, onSave }) {
             onClick={redo}
             disabled={historyStep >= history.length - 1}
             className="p-2 bg-dark-bg rounded text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Refazer"
+            title="Refazer (Ctrl+Y)"
           >
             <Redo className="w-4 h-4" />
           </button>
