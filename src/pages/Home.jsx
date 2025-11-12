@@ -452,7 +452,7 @@ export default function Home() {
 
             {/* Painel de filtros */}
             {showFilters && (
-              <div className="flex flex-wrap gap-4 p-4 bg-dark-bg border border-dark-border rounded-lg">
+              <div className="flex flex-wrap gap-4 p-4 bg-dark-bg border border-dark-border rounded-lg animate-slideDown">
                 {/* Ordenar por */}
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
