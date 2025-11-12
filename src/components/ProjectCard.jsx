@@ -200,7 +200,7 @@ export default function ProjectCard({
 
             {/* Descrição - ocupa metade do card */}
             {project.description && (
-              <p className="text-gray-400 text-sm mb-2 line-clamp-3 max-w-[50%]">
+              <p className="text-gray-400 text-sm mb-2 max-w-[50%]">
                 {project.description}
               </p>
             )}
@@ -289,7 +289,7 @@ export default function ProjectCard({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      className={`relative flex flex-col bg-dark-surface border rounded-lg p-5 group cursor-pointer min-h-[420px]
+      className={`relative flex flex-col bg-dark-surface border rounded-lg p-5 group cursor-pointer min-h-[520px]
         transition-all duration-300 ease-in-out
         ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/30' : 'border-dark-border'}
         ${isDragging ? 'opacity-40 scale-95 rotate-2 shadow-2xl' : 'hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1'}
@@ -303,7 +303,7 @@ export default function ProjectCard({
       {/* Conteúdo principal que se expande */}
       <div className="flex-grow">
         {/* Header */}
-        <div className="relative mb-3">
+        <div className="relative mb-3 h-[72px] flex items-end">
           {/* Círculo de seleção/status - posicionado absolutamente */}
           <button
             onClick={handleCheckboxClick}
@@ -325,17 +325,25 @@ export default function ProjectCard({
             )}
           </button>
           
-          <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-normal line-clamp-2 pt-6">
+          <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-normal line-clamp-2 overflow-hidden w-full">
             {project.name || 'Projeto sem nome'}
           </h3>
         </div>
 
-        {/* Descrição */}
-        {project.description && (
-          <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-            {project.description}
-          </p>
-        )}
+        {/* Linha divisória após título */}
+        <div className="border-t border-dark-border mb-4"></div>
+
+        {/* Descrição (área reservada para tamanho uniforme) */}
+        <div className="mb-4 h-[140px] overflow-hidden">
+          {project.description && (
+            <p className="text-gray-400 text-sm whitespace-pre-line break-normal">
+              {project.description}
+            </p>
+          )}
+        </div>
+
+        {/* Linha divisória após descrição */}
+        <div className="border-t border-dark-border mb-4"></div>
 
         {/* Metadados */}
         <div className="flex flex-wrap gap-3 mb-4 text-sm text-gray-400">
@@ -381,6 +389,9 @@ export default function ProjectCard({
             {complexityLabels[project.complexity]}
           </span>
         </div>
+
+        {/* Linha divisória após stack/complexidade */}
+        <div className="border-t border-dark-border mb-4"></div>
 
         {/* Links */}
         <div className="flex flex-wrap gap-2 mb-4">
