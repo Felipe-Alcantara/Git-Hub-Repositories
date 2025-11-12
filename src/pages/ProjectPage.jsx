@@ -36,6 +36,12 @@ export default function ProjectPage() {
     return saved ? parseInt(saved, 10) : 320;
   });
   const [isResizing, setIsResizing] = useState(false);
+  const [isEditingLinks, setIsEditingLinks] = useState(false);
+  const [editedLinks, setEditedLinks] = useState({
+    repoUrl: '',
+    webUrl: '',
+    downloadUrl: ''
+  });
 
   useEffect(() => {
     const loadedProject = getProjectById(id);
@@ -166,6 +172,37 @@ export default function ProjectPage() {
     setEditedProject(updated);
     updateProject(id, updated);
     setProject(updated);
+  };
+
+  const openEditLinks = () => {
+    setEditedLinks({
+      repoUrl: project.repoUrl || '',
+      webUrl: project.webUrl || '',
+      downloadUrl: project.downloadUrl || ''
+    });
+    setIsEditingLinks(true);
+  };
+
+  const saveLinks = () => {
+    const updated = {
+      ...editedProject,
+      repoUrl: editedLinks.repoUrl.trim(),
+      webUrl: editedLinks.webUrl.trim(),
+      downloadUrl: editedLinks.downloadUrl.trim()
+    };
+    setEditedProject(updated);
+    updateProject(id, updated);
+    setProject(updated);
+    setIsEditingLinks(false);
+  };
+
+  const cancelEditLinks = () => {
+    setIsEditingLinks(false);
+    setEditedLinks({
+      repoUrl: '',
+      webUrl: '',
+      downloadUrl: ''
+    });
   };
 
   if (!project) {
@@ -450,7 +487,16 @@ export default function ProjectPage() {
 
             {/* Links */}
             <div className="bg-dark-surface border border-dark-border rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Links</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white">Links</h2>
+                <button
+                  onClick={openEditLinks}
+                  className="p-2 hover:bg-dark-hover rounded-lg transition-colors"
+                  title="Editar links"
+                >
+                  <Edit2 className="w-4 h-4 text-gray-400 hover:text-blue-400" />
+                </button>
+              </div>
               
               <div className="space-y-3">
                 {project.repoUrl && (
@@ -661,6 +707,79 @@ export default function ProjectPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal de edição de links */}
+      {isEditingLinks && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface border border-dark-border rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold text-white mb-4">Editar Links</h3>
+            
+            <div className="space-y-4">
+              {/* Link do Repositório */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <ExternalLink className="w-4 h-4 inline mr-2" />
+                  URL do Repositório
+                </label>
+                <input
+                  type="url"
+                  value={editedLinks.repoUrl}
+                  onChange={(e) => setEditedLinks({ ...editedLinks, repoUrl: e.target.value })}
+                  placeholder="https://github.com/usuario/repositorio"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              {/* Link do Site/Demo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <Globe className="w-4 h-4 inline mr-2" />
+                  URL do Site/Demo
+                </label>
+                <input
+                  type="url"
+                  value={editedLinks.webUrl}
+                  onChange={(e) => setEditedLinks({ ...editedLinks, webUrl: e.target.value })}
+                  placeholder="https://meusite.com"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              {/* Link de Download */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <Download className="w-4 h-4 inline mr-2" />
+                  URL de Download
+                </label>
+                <input
+                  type="url"
+                  value={editedLinks.downloadUrl}
+                  onChange={(e) => setEditedLinks({ ...editedLinks, downloadUrl: e.target.value })}
+                  placeholder="https://example.com/download"
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Botões */}
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={cancelEditLinks}
+                className="px-4 py-2 bg-dark-bg hover:bg-dark-hover text-gray-300 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveLinks}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Salvar Links
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
