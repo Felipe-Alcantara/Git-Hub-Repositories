@@ -27,6 +27,7 @@ export const createEmptyProject = () => ({
     mvp: '',
     stack: '',
     upgrades: '',
+    sketches: '', // Canvas de desenho salvo como base64
   },
   
   // Metadados
@@ -45,10 +46,22 @@ export const getProjects = () => {
     const migratedProjects = projects.map(project => ({
       ...project,
       group: project.group || 'backlog', // Define 'backlog' como padrão se não existir
+      details: {
+        ideas: '',
+        improvements: '',
+        problems: '',
+        purpose: '',
+        users: '',
+        mvp: '',
+        stack: '',
+        upgrades: '',
+        sketches: '', // Adiciona campo de sketches se não existir
+        ...project.details,
+      }
     }));
     
     // Salva de volta se houve mudanças
-    if (projects.length > 0 && projects.some(p => !p.group)) {
+    if (projects.length > 0 && (projects.some(p => !p.group) || projects.some(p => !p.details?.sketches))) {
       saveProjects(migratedProjects);
     }
     

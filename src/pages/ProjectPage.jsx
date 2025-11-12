@@ -108,6 +108,22 @@ export default function ProjectPage() {
     localStorage.setItem('projectPageSidebarWidth', sidebarWidth.toString());
   }, [sidebarWidth]);
 
+  // Salva automaticamente os detalhes (incluindo sketches) após mudanças
+  useEffect(() => {
+    if (!editedProject || !project) return;
+    
+    // Evita salvar na primeira renderização
+    if (JSON.stringify(editedProject.details) === JSON.stringify(project.details)) return;
+
+    // Debounce: salva após 1 segundo sem mudanças
+    const timeoutId = setTimeout(() => {
+      updateProject(id, editedProject);
+      setProject(editedProject);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [editedProject?.details, id]);
+
   const toggleCompleted = () => {
     const updated = { ...editedProject, isCompleted: !editedProject.isCompleted };
     setEditedProject(updated);
