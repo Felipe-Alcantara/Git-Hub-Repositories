@@ -339,7 +339,7 @@ export default function ProjectCard({
           {/* Círculo de seleção/status - posicionado absolutamente */}
           <button
             onClick={handleCheckboxClick}
-            className={`absolute -left-1 -top-1 p-1 rounded-full transition-all hover:bg-dark-hover z-10 ${
+            className={`absolute -left-1 -top-2 p-1 rounded-full transition-all hover:bg-dark-hover z-10 ${
               isSelected 
                 ? 'text-blue-400 hover:text-blue-500' 
                 : project.isCompleted 
