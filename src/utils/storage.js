@@ -27,6 +27,7 @@ export const createEmptyProject = () => ({
     mvp: '',
     stack: '',
     upgrades: '',
+    structure: null, // Estrutura de pastas/arquivos do projeto (array)
     sketches: '', // Canvas de desenho salvo como base64
   },
   
@@ -55,6 +56,7 @@ export const getProjects = () => {
         mvp: '',
         stack: '',
         upgrades: '',
+        structure: null, // Adiciona campo de estrutura se não existir
         sketches: '', // Adiciona campo de sketches se não existir
         ...project.details,
       }

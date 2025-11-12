@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil } from 'lucide-react';
+import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree } from 'lucide-react';
 import { getProjectById, updateProject } from '../utils/storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DrawingCanvas from '../components/DrawingCanvas';
+import ProjectStructureTree from '../components/ProjectStructureTree';
 
 const sections = [
   { key: 'ideas', label: 'Ideias', icon: Lightbulb, placeholder: 'Anote suas ideias para o projeto...' },
@@ -17,6 +18,7 @@ const sections = [
   { key: 'mvp', label: 'MVP', icon: Rocket, placeholder: 'Defina o produto mínimo viável...' },
   { key: 'stack', label: 'Stack Técnica', icon: Layers, placeholder: 'Tecnologias e ferramentas utilizadas...' },
   { key: 'upgrades', label: 'Upgrades', icon: TrendingUp, placeholder: 'Próximas atualizações e features...' },
+  { key: 'structure', label: 'Estrutura do Projeto', icon: FolderTree, placeholder: 'Organize a estrutura de pastas e arquivos...', isTreeView: true },
   { key: 'sketches', label: 'Desenhos/Sketches', icon: Pencil, placeholder: 'Use o canvas para desenhar diagramas e esboços...', isCanvas: true },
 ];
 
@@ -549,6 +551,26 @@ export default function ProjectPage() {
                         
                         <div className="flex-1 overflow-hidden">
                           <DrawingCanvas
+                            initialData={editedProject.details[section.key]}
+                            onSave={(data) => handleDetailChange(section.key, data)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Se for a seção de estrutura, renderizar o tree view
+                  if (section.isTreeView) {
+                    return (
+                      <div key={section.key} className="h-full flex flex-col">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Icon className="w-6 h-6 text-blue-400" />
+                          <h3 className="text-xl font-semibold text-white">{section.label}</h3>
+                          <span className="text-xs text-gray-500">Estilo VSCode Explorer</span>
+                        </div>
+                        
+                        <div className="flex-1 overflow-hidden border border-dark-border rounded-lg">
+                          <ProjectStructureTree
                             initialData={editedProject.details[section.key]}
                             onSave={(data) => handleDetailChange(section.key, data)}
                           />
