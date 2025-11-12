@@ -538,7 +538,13 @@ export default function Home() {
       )}
 
       {/* Conteúdo principal */}
-      <main className={viewMode === 'kanban' ? 'w-full py-8 overflow-x-auto' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}>
+      <main className={
+        viewMode === 'kanban' 
+          ? 'w-full py-8 overflow-x-auto' 
+          : gridColumns >= 4 
+          ? 'w-full px-4 sm:px-6 lg:px-8 py-8'
+          : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'
+      }>
         {filteredProjects.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-gray-400 text-lg mb-4">
