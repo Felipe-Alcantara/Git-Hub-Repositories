@@ -1,4 +1,8 @@
 import { useState, useMemo } from 'react';
+// DnD Kit imports para animação em tempo real na reordenação
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
@@ -610,24 +614,20 @@ export default function Home() {
                 </div>
               </>
             ) : (
-              // Visualização Grid/List
-              filteredProjects.map(project => (
-                <ProjectCard 
-                  key={project.id} 
-                  project={project}
-                  isSelected={selectedProjects.includes(project.id)}
-                  onToggleSelect={toggleProjectSelection}
-                  onDelete={handleDeleteProject}
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, project.id)}
-                  onDragOver={(e) => handleDragOver(e, project.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, project.id)}
-                  onDragEnd={handleDragEnd}
-                  isDragging={draggedProject === project.id}
-                  isDragOver={dragOverProject === project.id}
-                />
-              ))
+              // Visualização Grid/List com animação de reorder via DnD Kit
+              <DnDSortableProjects
+                projects={filteredProjects}
+                viewMode={viewMode}
+                selectedProjects={selectedProjects}
+                onToggleSelect={toggleProjectSelection}
+                onDelete={handleDeleteProject}
+                onReorder={(newIdsOrder) => {
+                  // Persistir nova ordem customizada
+                  saveCustomOrder(newIdsOrder);
+                  setCustomOrder(newIdsOrder);
+                  setSortBy('custom');
+                }}
+              />
             )}
           </div>
         )}
@@ -694,6 +694,69 @@ function KanbanColumn({
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+// Componente para lista/grid com reordenação animada
+function DnDSortableProjects({ projects, viewMode, selectedProjects, onToggleSelect, onDelete, onReorder }) {
+  // Sensores (pointer) com pequena distância para ativar drag
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  );
+
+  const projectIds = projects.map(p => p.id);
+
+  const sortingStrategy = viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy;
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = projectIds.indexOf(active.id);
+    const newIndex = projectIds.indexOf(over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newOrderedIds = arrayMove(projectIds, oldIndex, newIndex);
+    onReorder(newOrderedIds);
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={projectIds} strategy={sortingStrategy}>
+        {projects.map(project => (
+          <SortableProjectCard
+            key={project.id}
+            project={project}
+            isSelected={selectedProjects.includes(project.id)}
+            onToggleSelect={onToggleSelect}
+            onDelete={onDelete}
+          />
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+// Wrapper que aplica transformações do DnD Kit ao card
+function SortableProjectCard({ project, isSelected, onToggleSelect, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
+  const style = {
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
+    transition,
+    // Suavização adicional
+    willChange: 'transform',
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <ProjectCard
+        project={project}
+        isSelected={isSelected}
+        onToggleSelect={onToggleSelect}
+        onDelete={onDelete}
+        draggable={false}
+        isDragging={isDragging}
+      />
     </div>
   );
 }
