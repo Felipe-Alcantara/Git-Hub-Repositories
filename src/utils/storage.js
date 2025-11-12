@@ -19,6 +19,7 @@ export const createEmptyProject = () => ({
   
   // Detalhes expandidos
   details: {
+    readme: '', // README do projeto
     ideas: '',
     improvements: '',
     problems: '',
@@ -48,6 +49,7 @@ export const getProjects = () => {
       ...project,
       group: project.group || 'backlog', // Define 'backlog' como padrão se não existir
       details: {
+        readme: '', // Adiciona campo readme se não existir
         ideas: '',
         improvements: '',
         problems: '',

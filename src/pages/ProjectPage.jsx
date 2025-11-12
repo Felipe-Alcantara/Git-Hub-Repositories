@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree } from 'lucide-react';
+import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload } from 'lucide-react';
 import { getProjectById, updateProject } from '../utils/storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -10,6 +10,7 @@ import DrawingCanvas from '../components/DrawingCanvas';
 import ProjectStructureTree from '../components/ProjectStructureTree';
 
 const sections = [
+  { key: 'readme', label: 'README', icon: FileText, placeholder: 'Cole ou carregue o README.md do projeto aqui...', hasFileUpload: true },
   { key: 'ideas', label: 'Ideias', icon: Lightbulb, placeholder: 'Anote suas ideias para o projeto...' },
   { key: 'improvements', label: 'Melhorias', icon: Wrench, placeholder: 'Melhorias planejadas ou em andamento...' },
   { key: 'problems', label: 'Problemas', icon: Bug, placeholder: 'Problemas conhecidos e soluções...' },
@@ -203,6 +204,27 @@ export default function ProjectPage() {
       webUrl: '',
       downloadUrl: ''
     });
+  };
+
+  const handleFileUpload = (e, key) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Verifica se é um arquivo de texto
+    if (!file.type.startsWith('text/') && !file.name.endsWith('.md')) {
+      alert('Por favor, selecione um arquivo de texto (.txt, .md, etc.)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      handleDetailChange(key, content);
+    };
+    reader.onerror = () => {
+      alert('Erro ao ler o arquivo. Tente novamente.');
+    };
+    reader.readAsText(file);
   };
 
   if (!project) {
@@ -633,24 +655,40 @@ export default function ProjectPage() {
                           <h3 className="text-xl font-semibold text-white">{section.label}</h3>
                         </div>
                         
-                        {/* Toggle entre modo edição e visualização */}
-                        <button
-                          onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-dark-surface border border-dark-border rounded-lg text-gray-300 hover:text-white hover:border-blue-500 transition-colors"
-                          title={viewMode === 'edit' ? 'Visualizar Markdown' : 'Editar'}
-                        >
-                          {viewMode === 'edit' ? (
-                            <>
-                              <Eye className="w-4 h-4" />
-                              <span className="text-sm">Visualizar</span>
-                            </>
-                          ) : (
-                            <>
-                              <Edit3 className="w-4 h-4" />
-                              <span className="text-sm">Editar</span>
-                            </>
+                        <div className="flex items-center gap-2">
+                          {/* Botão de upload de arquivo (apenas para seções com hasFileUpload) */}
+                          {section.hasFileUpload && viewMode === 'edit' && (
+                            <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors cursor-pointer">
+                              <Upload className="w-4 h-4" />
+                              <span className="text-sm">Carregar arquivo</span>
+                              <input
+                                type="file"
+                                accept=".md,.txt,text/*"
+                                onChange={(e) => handleFileUpload(e, section.key)}
+                                className="hidden"
+                              />
+                            </label>
                           )}
-                        </button>
+                          
+                          {/* Toggle entre modo edição e visualização */}
+                          <button
+                            onClick={() => setViewMode(viewMode === 'edit' ? 'preview' : 'edit')}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-dark-surface border border-dark-border rounded-lg text-gray-300 hover:text-white hover:border-blue-500 transition-colors"
+                            title={viewMode === 'edit' ? 'Visualizar Markdown' : 'Editar'}
+                          >
+                            {viewMode === 'edit' ? (
+                              <>
+                                <Eye className="w-4 h-4" />
+                                <span className="text-sm">Visualizar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Edit3 className="w-4 h-4" />
+                                <span className="text-sm">Editar</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                       
                       {viewMode === 'edit' ? (
