@@ -1,16 +1,28 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Trash2, Download, Undo, Redo, Pen, Eraser, Circle, Square, Minus, Save } from 'lucide-react';
+import { Trash2, Download, Undo, Redo, Pen, Eraser, Circle, Square, Minus, Save, Hand, ZoomIn, ZoomOut } from 'lucide-react';
 
 export default function DrawingCanvas({ initialData, onSave }) {
   const canvasRef = useRef(null);
   const lastSavedRef = useRef(null);
+  const virtualCanvasRef = useRef(null); // Canvas virtual maior
   const [isDrawing, setIsDrawing] = useState(false);
-  const [tool, setTool] = useState('pen'); // pen, eraser, circle, square, line
+  const [tool, setTool] = useState('pen'); // pen, eraser, circle, square, line, hand
   const [color, setColor] = useState('#3b82f6'); // azul padrão
   const [lineWidth, setLineWidth] = useState(2);
   const [history, setHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(-1);
   const [startPos, setStartPos] = useState(null);
+  
+  // Estados para pan e zoom
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [scale, setScale] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  
+  // Tamanho do canvas virtual (muito maior que a tela)
+  const VIRTUAL_WIDTH = 4000;
+  const VIRTUAL_HEIGHT = 3000;
 
   // Carregar dados iniciais do canvas
   useEffect(() => {
@@ -33,22 +45,31 @@ export default function DrawingCanvas({ initialData, onSave }) {
 
     const ctx = canvas.getContext('2d');
     
-    // Configurar tamanho do canvas
+    // Configurar tamanho do canvas visível
     const container = canvas.parentElement;
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
+    // Criar canvas virtual (maior)
+    const virtualCanvas = document.createElement('canvas');
+    virtualCanvas.width = VIRTUAL_WIDTH;
+    virtualCanvas.height = VIRTUAL_HEIGHT;
+    const virtualCtx = virtualCanvas.getContext('2d');
+    
+    // Preencher canvas virtual com fundo escuro
+    virtualCtx.fillStyle = '#1a1a1a';
+    virtualCtx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    
+    virtualCanvasRef.current = virtualCanvas;
+
     console.log('[DrawingCanvas] Canvas configurado:', {
-      width: canvas.width,
-      height: canvas.height
+      visible: { width: canvas.width, height: canvas.height },
+      virtual: { width: VIRTUAL_WIDTH, height: VIRTUAL_HEIGHT }
     });
 
-    // Preencher com fundo escuro
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     const initHistory = () => {
-      const imageData = canvas.toDataURL();
+      renderViewport(); // Renderiza a viewport inicial
+      const imageData = virtualCanvas.toDataURL();
       setHistory([imageData]);
       setHistoryStep(0);
       console.log('[DrawingCanvas] Histórico inicializado');
@@ -60,7 +81,7 @@ export default function DrawingCanvas({ initialData, onSave }) {
       const img = new Image();
       img.onload = () => {
         console.log('[DrawingCanvas] Imagem carregada com sucesso');
-        ctx.drawImage(img, 0, 0);
+        virtualCtx.drawImage(img, 0, 0);
         initHistory();
         // Marca a última imagem conhecida para evitar loops de recarga
         lastSavedRef.current = initialData;
@@ -79,14 +100,63 @@ export default function DrawingCanvas({ initialData, onSave }) {
   // Recarrega quando o initialData muda (quando troca de card)
   }, [initialData]);
 
-  const saveToHistory = () => {
+  // Função para renderizar a viewport (parte visível do canvas virtual)
+  const renderViewport = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      console.log('[DrawingCanvas] saveToHistory: Canvas não encontrado');
+    const virtualCanvas = virtualCanvasRef.current;
+    if (!canvas || !virtualCanvas) return;
+
+    const ctx = canvas.getContext('2d');
+    
+    // Limpar canvas visível
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Desenhar a parte visível do canvas virtual com transformações
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.drawImage(
+      virtualCanvas,
+      offsetX / scale,
+      offsetY / scale,
+      canvas.width / scale,
+      canvas.height / scale,
+      0,
+      0,
+      canvas.width / scale,
+      canvas.height / scale
+    );
+    ctx.restore();
+  }, [offsetX, offsetY, scale]);
+
+  // Atualizar renderização quando offset ou scale mudam
+  useEffect(() => {
+    renderViewport();
+  }, [offsetX, offsetY, scale, renderViewport]);
+
+  // Funções de zoom
+  const zoomIn = () => {
+    setScale(prev => Math.min(prev * 1.2, 5)); // Máximo 5x
+  };
+
+  const zoomOut = () => {
+    setScale(prev => Math.max(prev / 1.2, 0.1)); // Mínimo 0.1x
+  };
+
+  const resetView = () => {
+    setOffsetX(0);
+    setOffsetY(0);
+    setScale(1);
+  };
+
+  const saveToHistory = () => {
+    const virtualCanvas = virtualCanvasRef.current;
+    if (!virtualCanvas) {
+      console.log('[DrawingCanvas] saveToHistory: Canvas virtual não encontrado');
       return;
     }
 
-    const imageData = canvas.toDataURL();
+    const imageData = virtualCanvas.toDataURL();
     const newHistory = history.slice(0, historyStep + 1);
     newHistory.push(imageData);
     setHistory(newHistory);
@@ -104,13 +174,13 @@ export default function DrawingCanvas({ initialData, onSave }) {
   };
 
   const manualSave = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      console.log('[DrawingCanvas] manualSave: Canvas não encontrado');
+    const virtualCanvas = virtualCanvasRef.current;
+    if (!virtualCanvas) {
+      console.log('[DrawingCanvas] manualSave: Canvas virtual não encontrado');
       return;
     }
 
-    const imageData = canvas.toDataURL();
+    const imageData = virtualCanvas.toDataURL();
     console.log('[DrawingCanvas] Salvamento manual acionado:', {
       dataSize: imageData.length,
       timestamp: new Date().toISOString()
@@ -121,43 +191,49 @@ export default function DrawingCanvas({ initialData, onSave }) {
 
   const undo = useCallback(() => {
     if (historyStep > 0) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+      const virtualCanvas = virtualCanvasRef.current;
+      const virtualCtx = virtualCanvas.getContext('2d');
       const newStep = historyStep - 1;
       
       console.log('[DrawingCanvas] Undo:', { from: historyStep, to: newStep });
       
       const img = new Image();
       img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+        virtualCtx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        virtualCtx.fillStyle = '#1a1a1a';
+        virtualCtx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        virtualCtx.drawImage(img, 0, 0);
+        renderViewport();
       };
       img.src = history[newStep];
       setHistoryStep(newStep);
     } else {
       console.log('[DrawingCanvas] Undo: Não há mais ações para desfazer');
     }
-  }, [history, historyStep, onSave]);
+  }, [history, historyStep, renderViewport]);
 
   const redo = useCallback(() => {
     if (historyStep < history.length - 1) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+      const virtualCanvas = virtualCanvasRef.current;
+      const virtualCtx = virtualCanvas.getContext('2d');
       const newStep = historyStep + 1;
       
       console.log('[DrawingCanvas] Redo:', { from: historyStep, to: newStep });
       
       const img = new Image();
       img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+        virtualCtx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        virtualCtx.fillStyle = '#1a1a1a';
+        virtualCtx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        virtualCtx.drawImage(img, 0, 0);
+        renderViewport();
       };
       img.src = history[newStep];
       setHistoryStep(newStep);
     } else {
       console.log('[DrawingCanvas] Redo: Não há mais ações para refazer');
     }
-  }, [history, historyStep, onSave]);
+  }, [history, historyStep, renderViewport]);
 
   // Efeito para adicionar atalhos de teclado
   useEffect(() => {
@@ -179,83 +255,124 @@ export default function DrawingCanvas({ initialData, onSave }) {
   }, [undo, redo]);
 
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const virtualCanvas = virtualCanvasRef.current;
+    const virtualCtx = virtualCanvas.getContext('2d');
+    virtualCtx.fillStyle = '#1a1a1a';
+    virtualCtx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+    renderViewport();
     saveToHistory();
   };
 
   const downloadCanvas = () => {
-    const canvas = canvasRef.current;
+    const virtualCanvas = virtualCanvasRef.current;
     const link = document.createElement('a');
     link.download = 'sketch.png';
-    link.href = canvas.toDataURL();
+    link.href = virtualCanvas.toDataURL();
     link.click();
+  };
+
+  // Converter coordenadas da tela para coordenadas do canvas virtual
+  const screenToVirtual = (screenX, screenY) => {
+    return {
+      x: (screenX / scale) + (offsetX / scale),
+      y: (screenY / scale) + (offsetY / scale)
+    };
   };
 
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
+    const virtualCanvas = virtualCanvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+
+    // Modo de pan (arrastar a tela)
+    if (tool === 'hand') {
+      setIsPanning(true);
+      setPanStart({ x: screenX, y: screenY });
+      return;
+    }
+
+    const { x, y } = screenToVirtual(screenX, screenY);
 
     setIsDrawing(true);
     setStartPos({ x, y });
 
-    const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = tool === 'eraser' ? '#1a1a1a' : color;
-    ctx.lineWidth = tool === 'eraser' ? lineWidth * 4 : lineWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    const virtualCtx = virtualCanvas.getContext('2d');
+    virtualCtx.strokeStyle = tool === 'eraser' ? '#1a1a1a' : color;
+    virtualCtx.lineWidth = tool === 'eraser' ? lineWidth * 4 : lineWidth;
+    virtualCtx.lineCap = 'round';
+    virtualCtx.lineJoin = 'round';
 
     if (tool === 'pen' || tool === 'eraser') {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+      virtualCtx.beginPath();
+      virtualCtx.moveTo(x, y);
     }
   };
 
   const draw = (e) => {
+    const canvas = canvasRef.current;
+    const virtualCanvas = virtualCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+
+    // Modo de pan (arrastar a tela)
+    if (isPanning && tool === 'hand') {
+      const deltaX = screenX - panStart.x;
+      const deltaY = screenY - panStart.y;
+      setOffsetX(prev => prev - deltaX);
+      setOffsetY(prev => prev - deltaY);
+      setPanStart({ x: screenX, y: screenY });
+      return;
+    }
+
     if (!isDrawing) return;
 
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const ctx = canvas.getContext('2d');
+    const { x, y } = screenToVirtual(screenX, screenY);
+    const virtualCtx = virtualCanvas.getContext('2d');
 
     if (tool === 'pen' || tool === 'eraser') {
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      virtualCtx.lineTo(x, y);
+      virtualCtx.stroke();
+      renderViewport(); // Atualiza a visualização em tempo real
     } else if (tool === 'circle' || tool === 'square' || tool === 'line') {
       // Para formas, redesenhar do histórico e adicionar preview
       const img = new Image();
       img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+        virtualCtx.clearRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        virtualCtx.fillStyle = '#1a1a1a';
+        virtualCtx.fillRect(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT);
+        virtualCtx.drawImage(img, 0, 0);
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
+        virtualCtx.strokeStyle = color;
+        virtualCtx.lineWidth = lineWidth;
+        virtualCtx.beginPath();
 
         if (tool === 'circle') {
           const radius = Math.sqrt(Math.pow(x - startPos.x, 2) + Math.pow(y - startPos.y, 2));
-          ctx.arc(startPos.x, startPos.y, radius, 0, 2 * Math.PI);
+          virtualCtx.arc(startPos.x, startPos.y, radius, 0, 2 * Math.PI);
         } else if (tool === 'square') {
           const width = x - startPos.x;
           const height = y - startPos.y;
-          ctx.rect(startPos.x, startPos.y, width, height);
+          virtualCtx.rect(startPos.x, startPos.y, width, height);
         } else if (tool === 'line') {
-          ctx.moveTo(startPos.x, startPos.y);
-          ctx.lineTo(x, y);
+          virtualCtx.moveTo(startPos.x, startPos.y);
+          virtualCtx.lineTo(x, y);
         }
-        ctx.stroke();
+        virtualCtx.stroke();
+        renderViewport();
       };
       img.src = history[historyStep];
     }
   };
 
   const stopDrawing = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
     if (isDrawing) {
       setIsDrawing(false);
       saveToHistory();
@@ -323,6 +440,45 @@ export default function DrawingCanvas({ initialData, onSave }) {
             title="Retângulo"
           >
             <Square className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setTool('hand')}
+            className={`p-2 rounded transition-colors ${
+              tool === 'hand' ? 'bg-blue-600 text-white' : 'bg-dark-bg text-gray-400 hover:text-white'
+            }`}
+            title="Arrastar tela (Pan)"
+          >
+            <Hand className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="w-px h-6 bg-dark-border"></div>
+
+        {/* Zoom */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={zoomOut}
+            className="p-2 bg-dark-bg rounded text-gray-400 hover:text-white transition-colors"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <span className="text-xs text-gray-300 min-w-[50px] text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={zoomIn}
+            className="p-2 bg-dark-bg rounded text-gray-400 hover:text-white transition-colors"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            onClick={resetView}
+            className="px-2 py-1 bg-dark-bg rounded text-gray-400 hover:text-white transition-colors text-xs"
+            title="Resetar visualização"
+          >
+            Reset
           </button>
         </div>
 
@@ -411,7 +567,9 @@ export default function DrawingCanvas({ initialData, onSave }) {
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
-          className="border border-dark-border rounded cursor-crosshair"
+          className={`border border-dark-border rounded ${
+            tool === 'hand' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
+          }`}
           style={{ width: '100%', height: '100%' }}
         />
       </div>
