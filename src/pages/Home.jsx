@@ -9,7 +9,7 @@ import ProjectCard from '../components/ProjectCard';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import { getAllTags } from '../utils/tags';
-import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup } from '../utils/storage';
+import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder } from '../utils/storage';
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
@@ -43,24 +43,32 @@ export default function Home() {
 
   // Obter todos os grupos únicos para o kanban
   const kanbanGroups = useMemo(() => {
-    const groupsSet = new Set();
-    
-    // Adiciona grupos customizados salvos
+    // Pega a ordem salva
     const customGroups = getCustomGroups();
-    customGroups.forEach(g => groupsSet.add(g));
+    console.log('Grupos carregados do storage:', customGroups);
     
-    // Adiciona grupos que estão sendo usados nos projetos
+    const groupsSet = new Set(customGroups);
+    
+    // Adiciona grupos que estão sendo usados nos projetos mas não estão salvos
     projects.forEach(p => {
-      if (p.group) {
+      if (p.group && !groupsSet.has(p.group)) {
         groupsSet.add(p.group);
-        // Se o grupo não está salvo, salva automaticamente
-        if (!customGroups.includes(p.group)) {
-          addCustomGroup(p.group);
-        }
       }
     });
     
-    return Array.from(groupsSet).sort();
+    // Retorna mantendo a ordem de customGroups + novos grupos no final
+    const orderedGroups = [];
+    customGroups.forEach(g => {
+      if (groupsSet.has(g)) orderedGroups.push(g);
+    });
+    
+    // Adiciona grupos novos que não estão em customGroups
+    Array.from(groupsSet).forEach(g => {
+      if (!orderedGroups.includes(g)) orderedGroups.push(g);
+    });
+    
+    console.log('Grupos ordenados finais:', orderedGroups);
+    return orderedGroups;
   }, [projects, refreshKey]);
 
   // Filtrar e ordenar projetos
@@ -291,6 +299,13 @@ export default function Home() {
       // Force re-render para mostrar novo grupo
       setRefreshKey(prev => prev + 1);
     }
+  };
+
+  const handleGroupReorder = (newGroupsOrder) => {
+    console.log('Salvando nova ordem:', newGroupsOrder);
+    const saved = saveGroupsOrder(newGroupsOrder);
+    console.log('Ordem salva:', saved);
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleImportComplete = () => {
@@ -549,70 +564,28 @@ export default function Home() {
               : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 h-[calc(100vh-250px)]'
           }>
             {viewMode === 'kanban' ? (
-              // Visualização Kanban - Colunas dinâmicas baseadas em grupos
-              <>
-                {kanbanGroups.map(group => (
-                  <KanbanColumn 
-                    key={group}
-                    title={group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                    columnType={group}
-                    projects={filteredProjects.filter(p => p.group === group)}
-                    selectedProjects={selectedProjects}
-                    onToggleSelect={toggleProjectSelection}
-                    onDelete={handleDeleteProject}
-                    onDragOver={handleKanbanDragOver}
-                    onDragLeave={handleKanbanDragLeave}
-                    onDrop={handleKanbanDrop}
-                    isDragOver={dragOverColumn === group}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    draggedProject={draggedProject}
-                    dragOverProject={dragOverProject}
-                  />
-                ))}
-                
-                {/* Botão para adicionar novo grupo */}
-                <div className="bg-dark-surface border border-dashed border-dark-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[200px]">
-                  {showNewGroupInput ? (
-                    <div className="w-full space-y-3">
-                      <input
-                        type="text"
-                        value={newGroupName}
-                        onChange={(e) => setNewGroupName(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleCreateNewGroup()}
-                        placeholder="Nome do grupo..."
-                        className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleCreateNewGroup}
-                          className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                        >
-                          Criar
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowNewGroupInput(false);
-                            setNewGroupName('');
-                          }}
-                          className="flex-1 px-3 py-2 bg-dark-hover hover:bg-dark-border text-white text-sm rounded transition-colors"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowNewGroupInput(true)}
-                      className="flex flex-col items-center gap-2 text-gray-400 hover:text-blue-400 transition-colors"
-                    >
-                      <Plus className="w-8 h-8" />
-                      <span className="text-sm font-medium">Novo Grupo</span>
-                    </button>
-                  )}
-                </div>
-              </>
+              // Visualização Kanban - Colunas dinâmicas baseadas em grupos com reordenação
+              <SortableKanbanBoard
+                groups={kanbanGroups}
+                filteredProjects={filteredProjects}
+                selectedProjects={selectedProjects}
+                toggleProjectSelection={toggleProjectSelection}
+                handleDeleteProject={handleDeleteProject}
+                handleKanbanDragOver={handleKanbanDragOver}
+                handleKanbanDragLeave={handleKanbanDragLeave}
+                handleKanbanDrop={handleKanbanDrop}
+                dragOverColumn={dragOverColumn}
+                handleDragStart={handleDragStart}
+                handleDragEnd={handleDragEnd}
+                draggedProject={draggedProject}
+                dragOverProject={dragOverProject}
+                onGroupReorder={handleGroupReorder}
+                showNewGroupInput={showNewGroupInput}
+                newGroupName={newGroupName}
+                setNewGroupName={setNewGroupName}
+                handleCreateNewGroup={handleCreateNewGroup}
+                setShowNewGroupInput={setShowNewGroupInput}
+              />
             ) : (
               // Visualização Grid/List com animação de reorder via DnD Kit
               <DnDSortableProjects
@@ -643,6 +616,163 @@ export default function Home() {
   );
 }
 
+// Componente para Kanban com reordenação de grupos
+function SortableKanbanBoard({
+  groups,
+  filteredProjects,
+  selectedProjects,
+  toggleProjectSelection,
+  handleDeleteProject,
+  handleKanbanDragOver,
+  handleKanbanDragLeave,
+  handleKanbanDrop,
+  dragOverColumn,
+  handleDragStart,
+  handleDragEnd,
+  draggedProject,
+  dragOverProject,
+  onGroupReorder,
+  showNewGroupInput,
+  newGroupName,
+  setNewGroupName,
+  handleCreateNewGroup,
+  setShowNewGroupInput
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
+  const handleGroupDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    
+    const oldIndex = groups.indexOf(active.id);
+    const newIndex = groups.indexOf(over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    
+    const newGroupsOrder = arrayMove(groups, oldIndex, newIndex);
+    console.log('Reordenando grupos:', { oldIndex, newIndex, newGroupsOrder });
+    onGroupReorder(newGroupsOrder);
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGroupDragEnd}>
+      <SortableContext items={groups} strategy={rectSortingStrategy}>
+        {groups.map(group => (
+          <SortableKanbanColumn
+            key={group}
+            group={group}
+            title={group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            projects={filteredProjects.filter(p => p.group === group)}
+            selectedProjects={selectedProjects}
+            onToggleSelect={toggleProjectSelection}
+            onDelete={handleDeleteProject}
+            onDragOver={handleKanbanDragOver}
+            onDragLeave={handleKanbanDragLeave}
+            onDrop={handleKanbanDrop}
+            isDragOver={dragOverColumn === group}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            draggedProject={draggedProject}
+            dragOverProject={dragOverProject}
+          />
+        ))}
+      </SortableContext>
+      
+      {/* Botão para adicionar novo grupo */}
+      <div className="bg-dark-surface border border-dashed border-dark-border rounded-lg p-4 flex flex-col items-center justify-center min-h-[200px]">
+        {showNewGroupInput ? (
+          <div className="w-full space-y-3">
+            <input
+              type="text"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCreateNewGroup()}
+              placeholder="Nome do grupo..."
+              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateNewGroup}
+                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+              >
+                Criar
+              </button>
+              <button
+                onClick={() => {
+                  setShowNewGroupInput(false);
+                  setNewGroupName('');
+                }}
+                className="flex-1 px-3 py-2 bg-dark-hover hover:bg-dark-border text-white text-sm rounded transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowNewGroupInput(true)}
+            className="flex flex-col items-center gap-2 text-gray-400 hover:text-blue-400 transition-colors"
+          >
+            <Plus className="w-8 h-8" />
+            <span className="text-sm font-medium">Novo Grupo</span>
+          </button>
+        )}
+      </div>
+    </DndContext>
+  );
+}
+
+// Wrapper sortable para colunas Kanban
+function SortableKanbanColumn({ 
+  group, 
+  title, 
+  projects, 
+  selectedProjects, 
+  onToggleSelect, 
+  onDelete,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  isDragOver,
+  onDragStart,
+  onDragEnd,
+  draggedProject,
+  dragOverProject
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group });
+  const style = {
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <KanbanColumn
+        title={title}
+        columnType={group}
+        projects={projects}
+        selectedProjects={selectedProjects}
+        onToggleSelect={onToggleSelect}
+        onDelete={onDelete}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        isDragOver={isDragOver}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        draggedProject={draggedProject}
+        dragOverProject={dragOverProject}
+        isDraggingColumn={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
 // Componente auxiliar para colunas Kanban
 function KanbanColumn({ 
   title, 
@@ -658,19 +788,25 @@ function KanbanColumn({
   onDragStart,
   onDragEnd,
   draggedProject,
-  dragOverProject
+  dragOverProject,
+  isDraggingColumn = false,
+  dragHandleProps = {}
 }) {
   return (
     <div 
       className={`bg-dark-surface border rounded-lg p-4 min-h-[500px] flex flex-col
         transition-all duration-300 ease-in-out
         ${isDragOver ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/20' : 'border-dark-border'}
+        ${isDraggingColumn ? 'opacity-50' : ''}
       `}
       onDragOver={(e) => onDragOver(e, columnType)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, columnType)}
     >
-      <h3 className="text-base font-semibold text-white mb-4 flex items-center justify-between pb-3 border-b border-dark-border">
+      <h3 
+        className="text-base font-semibold text-white mb-4 flex items-center justify-between pb-3 border-b border-dark-border cursor-move"
+        {...dragHandleProps}
+      >
         {title}
         <span className="text-xs text-gray-400 font-normal bg-dark-border px-2 py-0.5 rounded-full">{projects.length}</span>
       </h3>

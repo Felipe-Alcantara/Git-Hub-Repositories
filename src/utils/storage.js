@@ -215,13 +215,25 @@ export const clearCustomOrder = () => {
 export const getCustomGroups = () => {
   try {
     const data = localStorage.getItem(CUSTOM_GROUPS_KEY);
-    const groups = data ? JSON.parse(data) : [];
+    const savedGroups = data ? JSON.parse(data) : [];
     
-    // Sempre incluir grupos padrão
+    // Se não há dados salvos, retorna ordem padrão
+    if (savedGroups.length === 0) {
+      return ['backlog', 'in-progress', 'completed'];
+    }
+    
+    // Garante que grupos padrão estejam presentes
     const defaultGroups = ['backlog', 'in-progress', 'completed'];
-    const allGroups = new Set([...defaultGroups, ...groups]);
+    const allGroups = new Set([...savedGroups]);
     
-    return Array.from(allGroups);
+    // Adiciona grupos padrão que estão faltando no final
+    defaultGroups.forEach(g => {
+      if (!allGroups.has(g)) {
+        savedGroups.push(g);
+      }
+    });
+    
+    return savedGroups;
   } catch (error) {
     console.error('Erro ao carregar grupos customizados:', error);
     return ['backlog', 'in-progress', 'completed'];
@@ -270,4 +282,15 @@ export const removeCustomGroup = (groupName) => {
 // Limpar grupos customizados
 export const clearCustomGroups = () => {
   localStorage.removeItem(CUSTOM_GROUPS_KEY);
+};
+
+// Salvar ordem customizada dos grupos
+export const saveGroupsOrder = (orderedGroups) => {
+  try {
+    localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(orderedGroups));
+    return true;
+  } catch (error) {
+    console.error('Erro ao salvar ordem dos grupos:', error);
+    return false;
+  }
 };
