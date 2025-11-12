@@ -92,8 +92,8 @@ export default function ProjectPage() {
       if (!isResizing) return;
       
       const newWidth = e.clientX;
-      // Limita a largura entre 250px e 600px
-      if (newWidth >= 250 && newWidth <= 600) {
+      // Limita apenas o mínimo para evitar bugs
+      if (newWidth >= 200) {
         setSidebarWidth(newWidth);
       }
     };
