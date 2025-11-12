@@ -300,18 +300,18 @@ export default function Home() {
               <div className="flex gap-3">
                 <ImportExportButtons onImportComplete={handleImportComplete} />
                 <button
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Importar Perfil</span>
-                </button>
-                <button
                   onClick={() => setIsModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                 >
                   <Plus className="w-5 h-5" />
                   <span>Novo Projeto</span>
+                </button>
+                <button
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Importar Perfil</span>
                 </button>
               </div>
             </div>
