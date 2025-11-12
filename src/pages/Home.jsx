@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 // DnD Kit imports para animação em tempo real na reordenação
-import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare } from 'lucide-react';
@@ -567,14 +567,22 @@ function SortableKanbanBoard({
   );
 
   const [activeItem, setActiveItem] = useState(null);
+  const [activeProject, setActiveProject] = useState(null);
 
   const handleDragStart = (event) => {
     setActiveItem(event.active);
+    
+    // Se for um card, encontrar o projeto correspondente para mostrar no overlay
+    if (event.active.data.current?.type === 'CARD') {
+      const project = filteredProjects.find(p => p.id === event.active.id);
+      setActiveProject(project);
+    }
   };
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
     setActiveItem(null);
+    setActiveProject(null);
 
     if (!over) return;
 
@@ -685,6 +693,25 @@ function SortableKanbanBoard({
           </button>
         )}
       </div>
+
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      }}>
+        {activeProject ? (
+          <div className="rotate-3 scale-105 opacity-90">
+            <ProjectCard
+              project={activeProject}
+              viewMode="kanban"
+              isSelected={false}
+              onToggleSelect={() => {}}
+              onDelete={() => {}}
+              draggable={false}
+              isDragging={false}
+            />
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
