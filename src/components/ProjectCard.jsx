@@ -72,17 +72,11 @@ export default function ProjectCard({
       {/* Conteúdo principal que se expande */}
       <div className="flex-grow">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-words">
-              {project.name || 'Projeto sem nome'}
-            </h3>
-          </div>
-          
-          {/* Círculo de seleção/status */}
+        <div className="relative mb-3">
+          {/* Círculo de seleção/status - posicionado absolutamente */}
           <button
             onClick={handleCheckboxClick}
-            className={`p-1 rounded-full transition-all hover:bg-dark-hover ${
+            className={`absolute -left-1 -top-1 p-1 rounded-full transition-all hover:bg-dark-hover z-10 ${
               isSelected 
                 ? 'text-blue-400 hover:text-blue-500' 
                 : project.isCompleted 
@@ -92,13 +86,17 @@ export default function ProjectCard({
             title={isSelected ? 'Desselecionar' : project.isCompleted ? 'Concluído - Clique para selecionar' : 'Em andamento - Clique para selecionar'}
           >
             {isSelected ? (
-              <CheckCircle2 className="w-6 h-6 fill-current" />
+              <CheckCircle2 className="w-5 h-5 fill-current" />
             ) : project.isCompleted ? (
-              <CheckCircle2 className="w-6 h-6" />
+              <CheckCircle2 className="w-5 h-5" />
             ) : (
-              <Circle className="w-6 h-6" />
+              <Circle className="w-5 h-5" />
             )}
           </button>
+          
+          <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-words pt-6">
+            {project.name || 'Projeto sem nome'}
+          </h3>
         </div>
 
         {/* Descrição */}
