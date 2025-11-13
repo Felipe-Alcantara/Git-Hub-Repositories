@@ -158,6 +158,18 @@ src/
 
 Todos os dados são armazenados **localmente no seu navegador**. Nada é enviado para servidores externos. Seus projetos são 100% privados e só você tem acesso.
 
+## 📚 Documentação Completa
+
+Para documentação detalhada, tutoriais e recursos adicionais, veja a pasta **[`_docs/`](_docs/)**:
+
+- 📖 **[Guia de Início](_docs/QUICKSTART.md)** - Comece aqui!
+- 🔧 **[Configuração](_docs/CONFIGURACAO.md)** - Configure seu ambiente
+- ▶️ **[Como Executar](_docs/EXECUTAR.md)** - Instruções de execução
+- 📁 **[Estrutura do Projeto](_docs/ESTRUTURA.md)** - Organização de arquivos
+- 🎨 **[Guia Visual](_docs/VISUAL.md)** - Screenshots e demonstrações
+- ❓ **[Solução de Problemas](_docs/TROUBLESHOOTING.md)** - Ajuda com erros comuns
+- 📋 **[Índice Completo](_docs/DOCS-INDEX.md)** - Todos os documentos
+
 ## 🤝 Contribuindo
 
 Contribuições são bem-vindas! Sinta-se livre para:
@@ -168,15 +180,6 @@ Contribuições são bem-vindas! Sinta-se livre para:
 ## 📄 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 🌟 Features Futuras
-
-- [ ] Drag and drop para reordenar projetos
-- [ ] Temas personalizados (dark/light)
-- [ ] Tags customizadas
-- [ ] Integração com API do GitHub
-- [ ] Gráficos e estatísticas
-- [ ] Sincronização via Gist
 
 ---
 
