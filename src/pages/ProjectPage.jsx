@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload } from 'lucide-react';
+import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles } from 'lucide-react';
 import { getProjectById, updateProject } from '../utils/storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DrawingCanvas from '../components/DrawingCanvas';
 import ProjectStructureTree from '../components/ProjectStructureTree';
+import AIExplanationModal from '../components/AIExplanationModal';
 
 const sections = [
   { key: 'readme', label: 'README', icon: FileText, placeholder: 'Cole ou carregue o README.md do projeto aqui...', hasFileUpload: true },
@@ -43,6 +44,7 @@ export default function ProjectPage() {
     webUrl: '',
     downloadUrl: ''
   });
+  const [showAIModal, setShowAIModal] = useState(false);
 
   useEffect(() => {
     const loadedProject = getProjectById(id);
@@ -264,6 +266,15 @@ export default function ProjectPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAIModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-colors"
+                title="Explicar projeto com IA"
+              >
+                <Sparkles className="w-4 h-4" />
+                Explicar com IA
+              </button>
+
               <button
                 onClick={toggleCompleted}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -818,6 +829,13 @@ export default function ProjectPage() {
           </div>
         </div>
       )}
+      
+      {/* Modal de Explicação com IA */}
+      <AIExplanationModal 
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        project={project}
+      />
     </div>
   );
 }
