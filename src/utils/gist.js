@@ -162,6 +162,47 @@ export async function gistExists(gistId, token = null) {
 }
 
 /**
+ * Deletar um Gist permanentemente
+ * @param {string} gistId - ID do Gist a ser deletado
+ * @param {string} token - Token do GitHub
+ * @returns {Promise<void>}
+ */
+export async function deleteGist(gistId, token) {
+  if (!gistId) {
+    throw new Error('ID do Gist é necessário');
+  }
+
+  if (!token) {
+    throw new Error('Token do GitHub é necessário para deletar o Gist');
+  }
+
+  try {
+    console.log('[Gist] Deletando Gist:', gistId);
+    
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Gist não encontrado. Pode já ter sido deletado.');
+      }
+      const error = await response.json();
+      throw new Error(error.message || `Erro ${response.status}: Falha ao deletar Gist`);
+    }
+
+    console.log('[Gist] ✅ Gist deletado com sucesso');
+  } catch (error) {
+    console.error('[Gist] ❌ Erro ao deletar:', error);
+    throw error;
+  }
+}
+
+/**
  * Salvar Gist ID no localStorage
  */
 export function saveGistId(gistId) {

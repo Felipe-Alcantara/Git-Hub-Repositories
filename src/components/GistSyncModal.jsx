@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Upload, Download, Cloud, Check, AlertCircle, Copy } from 'lucide-react';
-import { syncToGist, loadFromGist, saveGistId, loadGistId, clearGistId } from '../utils/gist';
+import { X, Upload, Download, Cloud, Check, AlertCircle, Copy, Trash2 } from 'lucide-react';
+import { syncToGist, loadFromGist, saveGistId, loadGistId, clearGistId, deleteGist } from '../utils/gist';
 import { getGitHubToken } from '../utils/github';
 
 export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImported }) {
@@ -106,6 +106,46 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
     }
   };
 
+  const handleDeleteGist = async () => {
+    const confirmMsg = 
+      '⚠️ ATENÇÃO: Esta ação é PERMANENTE!\n\n' +
+      'Você está prestes a DELETAR o backup na nuvem.\n' +
+      'O Gist será removido permanentemente do GitHub.\n\n' +
+      'Seus projetos locais não serão afetados, mas você perderá o backup na nuvem.\n\n' +
+      'Deseja realmente continuar?';
+    
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    const token = getGitHubToken();
+    if (!token) {
+      setError('Token do GitHub é necessário para deletar o Gist');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await deleteGist(savedGistId, token);
+      clearGistId();
+      setSavedGistId('');
+      setGistId('');
+      setSuccess('✅ Backup deletado permanentemente do GitHub');
+      
+      // Volta para o menu após 2 segundos
+      setTimeout(() => {
+        setMode('menu');
+      }, 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -136,13 +176,13 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
             <div className="space-y-4">
               {savedGistId && (
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Cloud className="text-blue-400" />
                         <span className="text-sm font-medium text-blue-400">Gist Conectado</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-3">
                         <code className="text-sm text-gray-300 bg-gray-900 px-2 py-1 rounded">
                           {savedGistId}
                         </code>
@@ -154,13 +194,29 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
                           {copied ? <Check size={16} /> : <Copy size={16} />}
                         </button>
                       </div>
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <p>• <strong className="text-gray-400">Deletar Backup:</strong> Remove permanentemente do GitHub</p>
+                        <p>• <strong className="text-gray-400">Desconectar:</strong> Apenas remove a conexão local</p>
+                      </div>
                     </div>
-                    <button
-                      onClick={handleClearGist}
-                      className="text-sm text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Desconectar
-                    </button>
+                    <div className="flex flex-col gap-2 min-w-[120px]">
+                      <button
+                        onClick={handleDeleteGist}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-1 px-3 py-2 text-sm bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded transition-colors disabled:opacity-50 border border-red-500/30"
+                        title="Deletar backup permanentemente do GitHub"
+                      >
+                        <Trash2 size={14} />
+                        Deletar
+                      </button>
+                      <button
+                        onClick={handleClearGist}
+                        className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded transition-colors"
+                        title="Apenas desconectar localmente"
+                      >
+                        Desconectar
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
