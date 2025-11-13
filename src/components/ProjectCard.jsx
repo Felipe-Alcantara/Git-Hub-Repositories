@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle } from 'lucide-react';
+import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
+import AIExplanationModal from './AIExplanationModal';
 
 const complexityColors = {
   simple: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -34,6 +36,7 @@ export default function ProjectCard({
 }) {
   const navigate = useNavigate();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const handleCardClick = (e) => {
     // Não navega se clicar em links ou botões
@@ -478,6 +481,19 @@ export default function ProjectCard({
               Download
             </a>
           )}
+          
+          {/* Botão Explicar com IA */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowAIModal(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600/20 text-purple-300 text-xs rounded hover:bg-purple-600/30 border border-purple-500/30 transition-colors"
+            title="Explicar projeto com IA"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Explicar com IA
+          </button>
         </div>
       </div>
 
@@ -497,6 +513,13 @@ export default function ProjectCard({
           Deletar
         </button>
       </div>
+
+      {/* Modal de Explicação com IA */}
+      <AIExplanationModal 
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        project={project}
+      />
     </div>
   );
 }
