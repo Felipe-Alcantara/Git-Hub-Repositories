@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Github, Loader2 } from 'lucide-react';
 import { fetchUserRepositories, fetchGitHubLanguages, fetchGitHubReadme } from '../utils/github';
+import { getProjects } from '../utils/storage';
 
 export default function ImportProfileModal({ isOpen, onClose, onImport }) {
   const [username, setUsername] = useState('');
@@ -58,10 +59,25 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
     setError('');
 
     try {
+      const existingProjects = getProjects();
+      const existingUrls = new Set(existingProjects.map(p => p.repoUrl));
+      
       const reposToImport = selectedRepos.map(idx => repositories[idx]);
+      
+      let importedCount = 0;
+      let skippedCount = 0;
+      const skippedRepos = [];
       
       // Importa cada repositório selecionado
       for (const repo of reposToImport) {
+        // Verifica se já existe
+        if (existingUrls.has(repo.repoUrl)) {
+          skippedCount++;
+          skippedRepos.push(repo.name);
+          console.log(`⚠️ Repositório já existe, pulando: ${repo.name}`);
+          continue;
+        }
+        
         const extractedUsername = extractUsername(username);
         
         // Busca linguagens do repositório
@@ -96,10 +112,30 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
         console.log(`[ImportProfile] Importando ${repo.name} - README: ${readme?.length || 0} caracteres`);
 
         await onImport(projectData);
+        importedCount++;
+        
+        // Adiciona à lista de URLs existentes para evitar duplicatas na mesma importação
+        existingUrls.add(repo.repoUrl);
       }
 
-      // Fecha o modal após importar
-      handleClose();
+      // Mostra mensagem de sucesso com estatísticas
+      if (importedCount > 0) {
+        const message = skippedCount > 0 
+          ? `✅ ${importedCount} repositório(s) importado(s). ${skippedCount} já existente(s) foram ignorados: ${skippedRepos.join(', ')}`
+          : `✅ ${importedCount} repositório(s) importado(s) com sucesso!`;
+        
+        // Poderia mostrar um toast aqui, mas vamos usar o error temporariamente para feedback
+        if (skippedCount > 0) {
+          setError(message);
+          setTimeout(() => {
+            handleClose();
+          }, 3000);
+        } else {
+          handleClose();
+        }
+      } else {
+        setError('⚠️ Todos os repositórios selecionados já foram importados anteriormente.');
+      }
     } catch (err) {
       setError('Erro ao importar repositórios: ' + err.message);
     } finally {

@@ -265,10 +265,16 @@ export async function fetchUserRepositories(username) {
       );
 
       if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Limite de requisições atingido. Configure um token do GitHub nas configurações.');
+        if (response.status === 401) {
+          throw new Error('❌ Token do GitHub inválido ou expirado. Configure um novo token nas configurações (⚙️).');
         }
-        throw new Error(`Erro ${response.status}: Usuário não encontrado`);
+        if (response.status === 403) {
+          throw new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações (⚙️) para aumentar o limite.');
+        }
+        if (response.status === 404) {
+          throw new Error(`❌ Usuário "${username}" não encontrado no GitHub.`);
+        }
+        throw new Error(`❌ Erro ${response.status}: Não foi possível buscar repositórios.`);
       }
 
       const data = await response.json();

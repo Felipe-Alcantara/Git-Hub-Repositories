@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Download } from 'lucide-react';
 import { fetchCompleteGitHubInfo } from '../utils/github';
+import { getProjects } from '../utils/storage';
 import TagSelector from './TagSelector';
 
 export default function NewProjectModal({ isOpen, onClose, onSave }) {
@@ -25,6 +26,17 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Verifica se já existe um projeto com a mesma URL
+    if (formData.repoUrl) {
+      const existingProjects = getProjects();
+      const duplicate = existingProjects.find(p => p.repoUrl === formData.repoUrl);
+      
+      if (duplicate) {
+        setError(`⚠️ Este repositório já foi importado: "${duplicate.name}"`);
+        return;
+      }
+    }
     
     const projectData = {
       ...formData,
