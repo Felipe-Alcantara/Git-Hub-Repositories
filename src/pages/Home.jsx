@@ -10,6 +10,7 @@ import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import ImportProfileModal from '../components/ImportProfileModal';
 import GitHubTokenModal from '../components/GitHubTokenModal';
+import GistSyncModal from '../components/GistSyncModal';
 import { getAllTags } from '../utils/tags';
 import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
@@ -18,6 +19,7 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
+  const [isGistModalOpen, setIsGistModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
@@ -196,6 +198,15 @@ export default function Home() {
     setIsModalOpen(false);
   };
 
+  const handleBulkImport = (importedProjects) => {
+    // Limpar projetos existentes e importar os novos
+    // Como useProjects não expõe uma função de substituir todos,
+    // vamos precisar limpar o localStorage diretamente
+    localStorage.setItem('github-projects', JSON.stringify(importedProjects));
+    // Recarregar a página para atualizar o estado
+    window.location.reload();
+  };
+
   const handleDeleteProject = (id) => {
     if (confirm('Tem certeza que deseja deletar este projeto?')) {
       deleteProject(id);
@@ -348,6 +359,17 @@ export default function Home() {
                 >
                   <Plus className="w-5 h-5" />
                   <span>Importar Perfil</span>
+                </button>
+                <button
+                  onClick={() => setIsGistModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white rounded-lg transition-colors shadow-lg"
+                  title="Sincronizar via Gist"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v6m0 0l-2-2m2 2l2-2" />
+                  </svg>
+                  <span>Sincronizar</span>
                 </button>
               </div>
             </div>
@@ -708,6 +730,14 @@ export default function Home() {
       <GitHubTokenModal
         isOpen={isTokenModalOpen}
         onClose={() => setIsTokenModalOpen(false)}
+      />
+
+      {/* Modal de Sincronização Gist */}
+      <GistSyncModal
+        isOpen={isGistModalOpen}
+        onClose={() => setIsGistModalOpen(false)}
+        projects={projects}
+        onProjectsImported={handleBulkImport}
       />
     </div>
   );
