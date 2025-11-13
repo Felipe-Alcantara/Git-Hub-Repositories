@@ -23,6 +23,14 @@ export async function syncToGist(projects, token, gistId = null) {
     version: '1.0.0'
   }, null, 2);
 
+  // Validar tamanho do JSON
+  const sizeInMB = (new Blob([content]).size / 1024 / 1024).toFixed(2);
+  console.log(`[Gist] Tamanho do backup: ${sizeInMB} MB`);
+  
+  if (sizeInMB > 10) {
+    throw new Error(`⚠️ Backup muito grande (${sizeInMB} MB). Limite do Gist: 10 MB. Considere reduzir o número de projetos ou usar Export/Import local.`);
+  }
+
   const gistData = {
     description: GIST_DESCRIPTION,
     public: false, // Gist secreto por padrão
@@ -120,7 +128,18 @@ export async function loadFromGist(gistId, token = null) {
       throw new Error('Arquivo de backup não encontrado no Gist');
     }
 
-    const data = JSON.parse(file.content);
+    // Validar tamanho antes de fazer parse
+    const sizeInMB = (new Blob([file.content]).size / 1024 / 1024).toFixed(2);
+    console.log(`[Gist] Tamanho do arquivo: ${sizeInMB} MB`);
+
+    let data;
+    try {
+      data = JSON.parse(file.content);
+    } catch (parseError) {
+      console.error('[Gist] Erro ao fazer parse do JSON:', parseError);
+      throw new Error(`❌ Backup corrompido (${sizeInMB} MB). O arquivo JSON está inválido. Tente usar Export/Import local ou crie um novo backup com menos projetos.`);
+    }
+    
     console.log('[Gist] Dados carregados com sucesso:', {
       projectsCount: data.projects?.length || 0,
       lastSync: data.lastSync
