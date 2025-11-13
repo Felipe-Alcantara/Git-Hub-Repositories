@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Github, Loader2 } from 'lucide-react';
-import { fetchUserRepositories, fetchGitHubLanguages } from '../utils/github';
+import { fetchUserRepositories, fetchGitHubLanguages, fetchGitHubReadme } from '../utils/github';
 
 export default function ImportProfileModal({ isOpen, onClose, onImport }) {
   const [username, setUsername] = useState('');
@@ -68,6 +68,9 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
         const languagesData = await fetchGitHubLanguages(extractedUsername, repo.name);
         const languageNames = Object.keys(languagesData).sort((a, b) => languagesData[b] - languagesData[a]);
         
+        // Busca o README do repositório
+        const readme = await fetchGitHubReadme(extractedUsername, repo.name);
+        
         // Detecta GitHub Pages
         const pagesUrl = repo.homepage || `https://${extractedUsername}.github.io/${repo.name}/`;
         
@@ -84,7 +87,13 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
           complexity: 'medium', // Pode ajustar baseado no tamanho
           isCompleted: false,
           group: 'backlog',
+          // README vai dentro de details
+          details: {
+            readme: readme || '',
+          },
         };
+
+        console.log(`[ImportProfile] Importando ${repo.name} - README: ${readme?.length || 0} caracteres`);
 
         await onImport(projectData);
       }

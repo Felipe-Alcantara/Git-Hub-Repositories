@@ -189,6 +189,11 @@ export async function fetchCompleteGitHubInfo(url) {
   // Detecta GitHub Pages
   const pagesUrl = await detectGitHubPages(owner, repo);
   
+  // Busca README
+  const readme = await fetchGitHubReadme(owner, repo);
+  
+  console.log(`[GitHub] fetchCompleteGitHubInfo - README length: ${readme?.length || 0}`);
+  
   return {
     name: repoInfo.data.name,
     description: repoInfo.data.description,
@@ -199,7 +204,44 @@ export async function fetchCompleteGitHubInfo(url) {
     downloadUrl: `${repoInfo.data.repoUrl}/archive/refs/heads/${repoInfo.data.defaultBranch}.zip`,
     repoCreatedAt: repoInfo.data.createdAt, // Data de criação do repositório
     owner: owner, // Nome do autor/dono do repositório
+    readme: readme, // Conteúdo do README em markdown
   };
+}
+
+/**
+ * Busca o conteúdo do README de um repositório
+ * @param {string} owner - Dono do repositório
+ * @param {string} repo - Nome do repositório
+ * @returns {Promise<string>} - Conteúdo do README em markdown ou string vazia
+ */
+export async function fetchGitHubReadme(owner, repo) {
+  try {
+    console.log(`[GitHub] Buscando README de ${owner}/${repo}...`);
+    
+    // A API do GitHub tem um endpoint específico para README
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/readme`,
+      {
+        headers: {
+          ...getGitHubHeaders(),
+          'Accept': 'application/vnd.github.v3.raw', // Retorna o conteúdo raw
+        }
+      }
+    );
+
+    if (!response.ok) {
+      // README não encontrado ou erro
+      console.warn(`[GitHub] README não encontrado para ${owner}/${repo} - Status: ${response.status}`);
+      return '';
+    }
+
+    const content = await response.text();
+    console.log(`[GitHub] ✅ README carregado com sucesso: ${owner}/${repo} (${content.length} caracteres)`);
+    return content;
+  } catch (error) {
+    console.error(`[GitHub] ❌ Erro ao buscar README de ${owner}/${repo}:`, error);
+    return '';
+  }
 }
 
 /**

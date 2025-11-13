@@ -16,6 +16,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     isCompleted: false,
     repoCreatedAt: null,
     owner: '',
+    readme: '', // Conteúdo do README
     group: 'backlog',
   });
 
@@ -28,7 +29,21 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     const projectData = {
       ...formData,
       languages: formData.languages, // Já é array agora
+      // Move o readme para dentro de details se existir
+      details: {
+        ...(formData.details || {}),
+        readme: formData.readme || '',
+      },
     };
+    
+    // Remove readme do nível raiz se existir
+    delete projectData.readme;
+    
+    console.log('[NewProjectModal] Salvando projeto com README:', {
+      name: projectData.name,
+      hasReadme: !!projectData.details?.readme,
+      readmeLength: projectData.details?.readme?.length || 0
+    });
     
     onSave(projectData);
     
@@ -45,6 +60,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       isCompleted: false,
       repoCreatedAt: null,
       owner: '',
+      readme: '',
       group: 'backlog',
     });
     setError('');
@@ -77,7 +93,15 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
         downloadUrl: repoData.downloadUrl || prev.downloadUrl,
         repoCreatedAt: repoData.repoCreatedAt || null, // Data de criação do repo
         owner: repoData.owner || prev.owner, // Nome do autor/dono do repositório
+        readme: repoData.readme || prev.readme, // Conteúdo do README em markdown
       }));
+      
+      // Feedback visual sobre o README
+      if (repoData.readme) {
+        console.log('✅ README importado com sucesso!');
+      } else {
+        console.log('ℹ️ README não encontrado neste repositório');
+      }
     } catch (err) {
       console.error('Erro ao buscar do GitHub:', err);
       setError(err.message || 'Erro ao buscar dados do GitHub');
