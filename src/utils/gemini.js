@@ -234,7 +234,7 @@ IMPORTANTE:
  * @param {string} apiKey - API key do Gemini
  * @returns {Promise<string>} - Resposta da IA
  */
-export async function askGeminiQuestion(project, question, conversationHistory, apiKey) {
+export async function askGeminiQuestion(project, question, conversationHistory, apiKey, activeSection = null) {
   if (!apiKey) {
     throw new Error('API key do Google Gemini não configurada');
   }
@@ -243,6 +243,27 @@ export async function askGeminiQuestion(project, question, conversationHistory, 
   const readme = project.details?.readme || 'README não disponível';
   const languages = project.languages?.join(', ') || 'Não especificado';
   const description = project.description || 'Sem descrição';
+
+  // Contexto da aba ativa
+  let sectionContext = '';
+  if (activeSection) {
+    const sectionLabels = {
+      'readme': 'README - Documentação principal do projeto',
+      'ideas': 'Ideias - Conceitos e sugestões para o projeto',
+      'improvements': 'Melhorias - Melhorias planejadas ou implementadas',
+      'problems': 'Problemas - Issues e bugs conhecidos',
+      'purpose': 'Propósito - Objetivo e missão do projeto',
+      'users': 'Usuários - Público-alvo e personas',
+      'mvp': 'MVP - Produto mínimo viável',
+      'stack': 'Stack Técnica - Tecnologias e ferramentas',
+      'upgrades': 'Upgrades - Próximas atualizações e features',
+      'structure': 'Estrutura do Projeto - Organização de arquivos e pastas',
+      'sketches': 'Desenhos/Sketches - Diagramas e esboços visuais'
+    };
+
+    sectionContext = `\n\n**ABA ATUALMENTE ATIVA:** ${sectionLabels[activeSection] || activeSection}`;
+    sectionContext += `\n**CONTEÚDO DA ABA ATIVA:** ${project.details?.[activeSection] || 'Conteúdo não disponível nesta aba'}`;
+  }
 
   // Construir histórico da conversa
   let conversationContext = '';
@@ -264,7 +285,7 @@ export async function askGeminiQuestion(project, question, conversationHistory, 
 **README (resumido):**
 ${readme.substring(0, 3000)}${readme.length > 3000 ? '...' : ''}
 
-${conversationContext}
+${sectionContext}${conversationContext}
 
 **PERGUNTA DO USUÁRIO:**
 ${question}
@@ -274,6 +295,7 @@ ${question}
 - Use português brasileiro
 - Seja técnico mas acessível
 - Foque em informações relevantes do projeto
+- Considere o contexto da aba atualmente ativa (${activeSection || 'nenhuma'})
 - Use markdown para formatação quando apropriado
 - Mantenha o contexto da conversa anterior
 - Se não souber algo específico, diga claramente

@@ -846,6 +846,7 @@ export default function ProjectPage() {
               visible={showAIModal}
               onClose={() => setShowAIModal(false)}
               project={editedProject || project}
+              activeSection={activeSection}
             />
           </aside>
         )}

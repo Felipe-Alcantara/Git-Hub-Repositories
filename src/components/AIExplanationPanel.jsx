@@ -3,7 +3,7 @@ import { X, Sparkles, Loader2, Send, MessageCircle, Bot, User } from 'lucide-rea
 import ReactMarkdown from 'react-markdown';
 import { explainProjectWithGemini, loadGeminiApiKey, askGeminiQuestion } from '../utils/gemini';
 
-export default function AIExplanationPanel({ visible, onClose, project }) {
+export default function AIExplanationPanel({ visible, onClose, project, activeSection }) {
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(`aiChat_${project?.id}`);
     return saved ? JSON.parse(saved) : [];
@@ -87,7 +87,7 @@ export default function AIExplanationPanel({ visible, onClose, project }) {
     setError('');
 
     try {
-      const result = await askGeminiQuestion(project, currentQuestion.trim(), messages, apiKey);
+      const result = await askGeminiQuestion(project, currentQuestion.trim(), messages, apiKey, activeSection);
       const aiMessage = {
         id: Date.now() + 1,
         type: 'ai',
@@ -147,6 +147,28 @@ export default function AIExplanationPanel({ visible, onClose, project }) {
           </button>
         </div>
       </div>
+
+      {/* Indicador da aba ativa */}
+      {activeSection && (
+        <div className="px-4 py-2 bg-dark-hover border-b border-dark-border">
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span>Contexto: <span className="text-blue-400 font-medium">
+              {activeSection === 'readme' && 'README'}
+              {activeSection === 'ideas' && 'Ideias'}
+              {activeSection === 'improvements' && 'Melhorias'}
+              {activeSection === 'problems' && 'Problemas'}
+              {activeSection === 'purpose' && 'Propósito'}
+              {activeSection === 'users' && 'Usuários'}
+              {activeSection === 'mvp' && 'MVP'}
+              {activeSection === 'stack' && 'Stack Técnica'}
+              {activeSection === 'upgrades' && 'Upgrades'}
+              {activeSection === 'structure' && 'Estrutura do Projeto'}
+              {activeSection === 'sketches' && 'Desenhos/Sketches'}
+            </span></span>
+          </div>
+        </div>
+      )}
 
       {/* Área de mensagens */}
       <div className="flex-1 overflow-auto p-4 space-y-4">
