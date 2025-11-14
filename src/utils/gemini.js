@@ -112,25 +112,46 @@ export async function explainProjectWithGemini(project, apiKey) {
   const languages = project.languages?.join(', ') || 'Não especificado';
   const description = project.description || 'Sem descrição';
 
-  const prompt = `Você é um assistente técnico especializado em análise de projetos de software.
+  const prompt = `Você é um assistente técnico especializado em análise de projetos de software no GitHub.
 
-Analise o seguinte projeto do GitHub e forneça uma explicação clara e objetiva em português:
+Analise o seguinte projeto e forneça uma explicação clara, objetiva e bem estruturada em português:
 
-**Nome do Projeto:** ${project.name}
-**Descrição:** ${description}
-**Linguagens/Tecnologias:** ${languages}
+**📋 INFORMAÇÕES DO PROJETO**
+• **Nome:** ${project.name}
+• **Descrição:** ${description}
+• **Tecnologias:** ${languages}
 
-**README:**
-${readme.substring(0, 5000)} ${readme.length > 5000 ? '...(truncado)' : ''}
+**📖 CONTEÚDO DO README**
+${readme.substring(0, 5000)} ${readme.length > 5000 ? '...(conteúdo truncado)' : ''}
 
-Por favor, forneça uma explicação estruturada contendo:
+**🔍 ANÁLISE ESTRUTURADA**
 
-1. **O que o projeto faz** (resumo objetivo em 2-3 linhas)
-2. **Principais tecnologias e funcionalidades**
-3. **Para quem é útil / Casos de uso**
-4. **Como começar** (se houver instruções no README)
+Por favor, organize sua resposta usando EXATAMENTE esta estrutura com os emojis indicados:
 
-Seja conciso, técnico mas acessível. Use emojis para facilitar a leitura.`;
+## 🎯 **O QUE FAZ**
+[Resumo objetivo em algumas linhas do que o projeto faz]
+
+## 🛠️ **TECNOLOGIAS PRINCIPAIS**
+[Bullet points das principais tecnologias, frameworks e bibliotecas identificadas]
+
+## ✨ **FUNCIONALIDADES-CHAVE**
+[Bullet points das principais funcionalidades do projeto]
+
+## 👥 **PÚBLICO-ALVO**
+[Para quem é útil / casos de uso principais]
+
+## 🚀 **COMO COMEÇAR**
+[Instruções básicas de instalação/configuração se encontradas no README, senão omitir]
+
+## 📊 **COMPLEXIDADE**
+[Estimativa simples: Básico/Intermediário/Avançado]
+
+IMPORTANTE:
+- Seja conciso mas informativo
+- Use markdown para formatação (negrito, itálico, listas)
+- Mantenha tom técnico mas acessível
+- Se alguma seção não for aplicável, seja descritivo
+- Foque em informações objetivas encontradas no projeto, mas explique de forma clara para leigos também`;
 
   try {
     // Obter modelo disponível
@@ -157,8 +178,10 @@ Seja conciso, técnico mas acessível. Use emojis para facilitar a leitura.`;
             }
           ],
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
+            temperature: 0.3,
+            maxOutputTokens: 2048,
+            topP: 0.8,
+            topK: 40,
           }
         })
       },

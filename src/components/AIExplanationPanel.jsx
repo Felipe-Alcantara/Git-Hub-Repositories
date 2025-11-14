@@ -79,7 +79,11 @@ export default function AIExplanationPanel({ visible, onClose, project }) {
 
       <div className="p-4 overflow-auto flex-1">
         {loading && (
-          <div className="text-sm text-gray-300">Gerando explicação... aguarde.</div>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-purple-400 mb-3" />
+            <div className="text-sm text-gray-300 mb-1">Analisando projeto...</div>
+            <div className="text-xs text-gray-500">Isso pode levar alguns segundos</div>
+          </div>
         )}
 
         {error && (
@@ -87,8 +91,38 @@ export default function AIExplanationPanel({ visible, onClose, project }) {
         )}
 
         {!loading && !error && explanation && (
-          <div className="prose prose-invert max-w-none text-sm">
-            <ReactMarkdown>{explanation}</ReactMarkdown>
+          <div className="prose prose-invert max-w-none text-sm prose-headings:text-white prose-headings:font-semibold prose-headings:border-b prose-headings:border-gray-600 prose-headings:pb-1 prose-headings:mb-3 prose-p:text-gray-200 prose-p:leading-relaxed prose-ul:text-gray-200 prose-li:marker:text-purple-400 prose-strong:text-white prose-strong:font-medium prose-code:text-purple-300 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs">
+            <ReactMarkdown
+              components={{
+                h2: ({ children }) => (
+                  <h2 className="text-base font-bold text-white mt-4 mb-2 first:mt-0 flex items-center gap-2">
+                    {children}
+                  </h2>
+                ),
+                ul: ({ children }) => (
+                  <ul className="space-y-1 ml-4 mb-3">
+                    {children}
+                  </ul>
+                ),
+                li: ({ children }) => (
+                  <li className="text-gray-200 leading-relaxed">
+                    {children}
+                  </li>
+                ),
+                strong: ({ children }) => (
+                  <strong className="text-white font-semibold">
+                    {children}
+                  </strong>
+                ),
+                code: ({ children }) => (
+                  <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded text-xs font-mono">
+                    {children}
+                  </code>
+                )
+              }}
+            >
+              {explanation}
+            </ReactMarkdown>
           </div>
         )}
 
