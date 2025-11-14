@@ -213,6 +213,30 @@ export default function ProjectPage() {
     };
   }, [editedProject?.details, id, editedProject?.id, project]);
 
+  // Preservar posição do scroll
+  useEffect(() => {
+    // Pequeno delay para garantir que o conteúdo seja renderizado
+    const timeoutId = setTimeout(() => {
+      const savedScroll = localStorage.getItem('projectPageScrollPosition');
+      if (savedScroll) {
+        const scrollPosition = parseInt(savedScroll, 10);
+        if (scrollPosition > 0) {
+          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+        }
+      }
+    }, 100);
+
+    const handleScroll = () => {
+      localStorage.setItem('projectPageScrollPosition', window.scrollY.toString());
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   const toggleCompleted = () => {
     const updated = { ...editedProject, isCompleted: !editedProject.isCompleted };
     setEditedProject(updated);

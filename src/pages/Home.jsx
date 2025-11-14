@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 // DnD Kit imports para animação em tempo real na reordenação
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
@@ -286,6 +286,30 @@ export default function Home() {
   const handleImportComplete = () => {
     window.location.reload(); // Recarregar para mostrar novos projetos
   };
+
+  // Preservar posição do scroll
+  useEffect(() => {
+    // Pequeno delay para garantir que o conteúdo seja renderizado
+    const timeoutId = setTimeout(() => {
+      const savedScroll = localStorage.getItem('homeScrollPosition');
+      if (savedScroll) {
+        const scrollPosition = parseInt(savedScroll, 10);
+        if (scrollPosition > 0) {
+          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
+        }
+      }
+    }, 100);
+
+    const handleScroll = () => {
+      localStorage.setItem('homeScrollPosition', window.scrollY.toString());
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   if (loading) {
     return (
