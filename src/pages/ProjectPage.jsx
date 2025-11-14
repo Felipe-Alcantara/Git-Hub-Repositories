@@ -30,8 +30,8 @@ export default function ProjectPage() {
   const [project, setProject] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState(null);
-  const [activeSection, setActiveSection] = useState('ideas');
-  const [viewMode, setViewMode] = useState('edit'); // 'edit' ou 'preview'
+  const [activeSection, setActiveSection] = useState('readme');
+  const [viewMode, setViewMode] = useState('preview'); // 'edit' ou 'preview'
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Carrega a largura salva ou usa 320px como padrão
     const saved = localStorage.getItem('projectPageSidebarWidth');
