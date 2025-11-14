@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import DrawingCanvas from '../components/DrawingCanvas';
 import ProjectStructureTree from '../components/ProjectStructureTree';
-import AIExplanationModal from '../components/AIExplanationModal';
+import AIExplanationPanel from '../components/AIExplanationPanel';
 
 const sections = [
   { key: 'readme', label: 'README', icon: FileText, placeholder: 'Cole ou carregue o README.md do projeto aqui...', hasFileUpload: true },
@@ -45,6 +45,11 @@ export default function ProjectPage() {
     downloadUrl: ''
   });
   const [showAIModal, setShowAIModal] = useState(false);
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('projectPageRightWidth');
+    return saved ? parseInt(saved, 10) : 420;
+  });
+  const [isResizingRight, setIsResizingRight] = useState(false);
 
   useEffect(() => {
     const loadedProject = getProjectById(id);
@@ -90,6 +95,11 @@ export default function ProjectPage() {
     e.preventDefault();
   };
 
+  const handleMouseDownRight = (e) => {
+    setIsResizingRight(true);
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing) return;
@@ -120,10 +130,43 @@ export default function ProjectPage() {
     };
   }, [isResizing]);
 
+  // Right sidebar resize handling
+  useEffect(() => {
+    const handleMouseMoveRight = (e) => {
+      if (!isResizingRight) return;
+      // Calcular largura a partir da direita
+      const newWidth = Math.max(320, window.innerWidth - e.clientX);
+      setRightSidebarWidth(newWidth);
+    };
+
+    const handleMouseUpRight = () => {
+      setIsResizingRight(false);
+    };
+
+    if (isResizingRight) {
+      document.addEventListener('mousemove', handleMouseMoveRight);
+      document.addEventListener('mouseup', handleMouseUpRight);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMoveRight);
+      document.removeEventListener('mouseup', handleMouseUpRight);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizingRight]);
+
   // Salva a largura da sidebar no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('projectPageSidebarWidth', sidebarWidth.toString());
   }, [sidebarWidth]);
+
+  // Salva a largura do painel direito
+  useEffect(() => {
+    localStorage.setItem('projectPageRightWidth', rightSidebarWidth.toString());
+  }, [rightSidebarWidth]);
 
   // Salva automaticamente os detalhes (incluindo sketches) após mudanças
   useEffect(() => {
@@ -755,6 +798,25 @@ export default function ProjectPage() {
             </div>
           </div>
         </main>
+
+        {/* Painel direito de explicação com IA (redimensionável) */}
+        {showAIModal && (
+          <aside
+            className="flex-shrink-0 border-l border-dark-border bg-dark-surface overflow-y-auto relative"
+            style={{ width: `${rightSidebarWidth}px` }}
+          >
+            <div
+              onMouseDown={handleMouseDownRight}
+              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors"
+              style={{ transform: 'translateX(-50%)' }}
+            />
+            <AIExplanationPanel
+              visible={showAIModal}
+              onClose={() => setShowAIModal(false)}
+              project={editedProject || project}
+            />
+          </aside>
+        )}
       </div>
 
       {/* Modal de edição de links */}
@@ -830,12 +892,7 @@ export default function ProjectPage() {
         </div>
       )}
       
-      {/* Modal de Explicação com IA */}
-      <AIExplanationModal 
-        isOpen={showAIModal}
-        onClose={() => setShowAIModal(false)}
-        project={project}
-      />
+      {/* Painel de explicação movido para o painel direito (redimensionável) */}
     </div>
   );
 }
