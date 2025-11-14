@@ -10,6 +10,22 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [verifyingGemini, setVerifyingGemini] = useState(false);
   const [geminiVerified, setGeminiVerified] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      // Pequeno delay para garantir que o componente seja renderizado antes da animação
+      const timer = setTimeout(() => setShouldAnimate(true), 10);
+      return () => clearTimeout(timer);
+    } else {
+      setShouldAnimate(false);
+      // Delay para permitir animação de saída antes de remover do DOM
+      const timer = setTimeout(() => setIsVisible(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -56,18 +72,22 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-surface border border-dark-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 transition-all duration-500 ease-out ${
+      shouldAnimate ? 'opacity-100' : 'opacity-0'
+    }`}>
+      <div className={`bg-dark-surface border border-dark-border rounded-lg w-full max-w-[96vw] max-h-[95vh] overflow-y-auto transform transition-all duration-500 ease-out ${
+        shouldAnimate ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-8'
+      }`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border">
           <div className="flex items-center gap-3">
             <Key className="w-6 h-6 text-blue-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Configurações de API</h2>
-              <p className="text-sm text-gray-400 mt-1">Configure tokens do GitHub e Google Gemini</p>
+              <h2 className="text-xl font-semibold text-white">Tokens de API - GitHub & IA</h2>
+              <p className="text-sm text-gray-400 mt-1">Configure acesso ao GitHub e habilite explicações com IA</p>
             </div>
           </div>
           <button
@@ -79,9 +99,11 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Seção GitHub Token */}
-          <div className="space-y-4">
+        <div className="p-6">
+          {/* Grid responsivo: 1 coluna em mobile, 2 colunas em md+ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Seção GitHub Token */}
+            <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Key className="w-5 h-5 text-blue-400" />
               <h3 className="text-lg font-semibold text-white">GitHub API Token</h3>
@@ -151,11 +173,8 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
           </div>
           </div>
 
-          {/* Divisor */}
-          <div className="border-t border-dark-border"></div>
-
-          {/* Seção Google Gemini */}
-          <div className="space-y-4">
+            {/* Seção Google Gemini */}
+            <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-purple-400" />
               <h3 className="text-lg font-semibold text-white">Google Gemini API Key</h3>
@@ -261,6 +280,7 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
               <p className="text-xs text-gray-500">
                 A chave é armazenada apenas no seu navegador (localStorage)
               </p>
+            </div>
             </div>
           </div>
         </div>
