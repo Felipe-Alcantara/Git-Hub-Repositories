@@ -227,6 +227,133 @@ IMPORTANTE:
 }
 
 /**
+ * Fazer uma pergunta sobre um projeto para o Gemini
+ * @param {object} project - Dados do projeto
+ * @param {string} question - Pergunta do usuário
+ * @param {Array} conversationHistory - Histórico da conversa
+ * @param {string} apiKey - API key do Gemini
+ * @returns {Promise<string>} - Resposta da IA
+ */
+export async function askGeminiQuestion(project, question, conversationHistory, apiKey) {
+  if (!apiKey) {
+    throw new Error('API key do Google Gemini não configurada');
+  }
+
+  // Preparar contexto do projeto
+  const readme = project.details?.readme || 'README não disponível';
+  const languages = project.languages?.join(', ') || 'Não especificado';
+  const description = project.description || 'Sem descrição';
+
+  // Construir histórico da conversa
+  let conversationContext = '';
+  if (conversationHistory && conversationHistory.length > 0) {
+    conversationContext = '\n\n**HISTÓRICO DA CONVERSA:**\n';
+    conversationHistory.slice(-10).forEach(msg => { // Últimas 10 mensagens para não exceder limite
+      const role = msg.type === 'user' ? 'Usuário' : 'IA';
+      conversationContext += `${role}: ${msg.content}\n`;
+    });
+  }
+
+  const prompt = `Você é um assistente especializado em análise de projetos de software no GitHub.
+
+**CONTEXTO DO PROJETO:**
+• Nome: ${project.name}
+• Descrição: ${description}
+• Tecnologias: ${languages}
+
+**README (resumido):**
+${readme.substring(0, 3000)}${readme.length > 3000 ? '...' : ''}
+
+${conversationContext}
+
+**PERGUNTA DO USUÁRIO:**
+${question}
+
+**INSTRUÇÕES:**
+- Responda de forma clara, objetiva e útil
+- Use português brasileiro
+- Seja técnico mas acessível
+- Foque em informações relevantes do projeto
+- Use markdown para formatação quando apropriado
+- Mantenha o contexto da conversa anterior
+- Se não souber algo específico, diga claramente
+
+Responda à pergunta acima:`;
+
+  try {
+    // Obter modelo disponível
+    const modelName = await getAvailableGeminiModel(apiKey);
+
+    console.log('[Gemini] Fazendo pergunta sobre projeto:', project.name);
+    console.log('[Gemini] Usando modelo:', modelName);
+
+    const response = await fetchWithRetry(
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 1536,
+            topP: 0.8,
+            topK: 40,
+          }
+        })
+      },
+      3 // Máximo de 3 tentativas
+    );
+
+    console.log('[Gemini] Status da resposta da pergunta:', response.status);
+
+    if (!response.ok) {
+      if (response.status === 400) {
+        const error = await response.json();
+        console.error('[Gemini] Erro 400:', error);
+        throw new Error(`API Gemini: ${error.error?.message || 'Requisição inválida'}`);
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('❌ API key inválida ou sem permissão. Verifique sua chave nas configurações.');
+      }
+      if (response.status === 404) {
+        throw new Error('❌ URL da API não encontrada. Verifique se a API key está correta.');
+      }
+      if (response.status === 429) {
+        throw new Error('⏱️ Limite de requisições atingido!\n\n📊 Sobre limites da API gratuita:\n• 60 requisições por minuto\n• 1.000 requisições por dia\n• Aguarde alguns minutos antes de tentar novamente\n\n💡 Dica: Use a API key apenas quando necessário para evitar limites.');
+      }
+      const errorText = await response.text();
+      console.error('[Gemini] Erro não tratado:', response.status, errorText);
+      throw new Error(`Erro ${response.status}: Falha ao enviar pergunta`);
+    }
+
+    const data = await response.json();
+
+    // Extrair texto da resposta
+    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!answer) {
+      throw new Error('Resposta vazia da API');
+    }
+
+    return answer;
+  } catch (error) {
+    console.error('[Gemini] Erro ao fazer pergunta:', error);
+    throw error;
+  }
+}
+
+/**
  * Função auxiliar para fazer requisições com retry automático
  * @param {string} url - URL da requisição
  * @param {object} options - Opções da requisição
