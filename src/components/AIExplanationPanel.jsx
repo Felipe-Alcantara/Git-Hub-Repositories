@@ -4,18 +4,33 @@ import ReactMarkdown from 'react-markdown';
 import { explainProjectWithGemini, loadGeminiApiKey } from '../utils/gemini';
 
 export default function AIExplanationPanel({ visible, onClose, project }) {
-  const [explanation, setExplanation] = useState('');
+  const [explanation, setExplanation] = useState(() => {
+    const saved = localStorage.getItem(`aiExplanation_${project?.id}`);
+    return saved || '';
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!visible) return;
-    // auto-generate when opened if empty
+    // Só gera automaticamente se não houver explicação salva e não estiver carregando
     if (!explanation && !loading && !error) {
       generateExplanation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  // Carrega explicação salva quando o projeto muda
+  useEffect(() => {
+    if (project?.id) {
+      const saved = localStorage.getItem(`aiExplanation_${project.id}`);
+      if (saved) {
+        setExplanation(saved);
+      } else {
+        setExplanation('');
+      }
+    }
+  }, [project?.id]);
 
   const generateExplanation = async () => {
     const apiKey = loadGeminiApiKey();
@@ -29,6 +44,8 @@ export default function AIExplanationPanel({ visible, onClose, project }) {
     try {
       const result = await explainProjectWithGemini(project, apiKey);
       setExplanation(result);
+      // Salva a explicação no localStorage
+      localStorage.setItem(`aiExplanation_${project?.id}`, result);
     } catch (err) {
       setError(err.message || 'Erro ao gerar explicação');
     } finally {

@@ -44,7 +44,10 @@ export default function ProjectPage() {
     webUrl: '',
     downloadUrl: ''
   });
-  const [showAIModal, setShowAIModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(() => {
+    const saved = localStorage.getItem('projectPageShowAIModal');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [rightSidebarWidth, setRightSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('projectPageRightWidth');
     return saved ? parseInt(saved, 10) : 420;
@@ -167,6 +170,11 @@ export default function ProjectPage() {
   useEffect(() => {
     localStorage.setItem('projectPageRightWidth', rightSidebarWidth.toString());
   }, [rightSidebarWidth]);
+
+  // Salva o estado do painel AI
+  useEffect(() => {
+    localStorage.setItem('projectPageShowAIModal', JSON.stringify(showAIModal));
+  }, [showAIModal]);
 
   // Salva automaticamente os detalhes (incluindo sketches) após mudanças
   useEffect(() => {
