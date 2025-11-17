@@ -75,7 +75,7 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
   if (!isVisible) return null;
 
   return (
-    <div className={`fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 transition-all duration-500 ease-out ${
+    <div className={`fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4 transition-all duration-500 ease-out ${
       shouldAnimate ? 'opacity-100' : 'opacity-0'
     }`}>
       <div className={`bg-dark-surface border border-dark-border rounded-lg w-full max-w-[96vw] max-h-[95vh] overflow-y-auto transform transition-all duration-500 ease-out ${

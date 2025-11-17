@@ -445,7 +445,7 @@ export default function Home() {
                   {showHelpBalloon && (
                     <div
                       ref={balloonRef}
-                      className={`fixed w-64 bg-yellow-500 text-black p-3 rounded-lg shadow-xl z-50`}
+                      className={`fixed w-64 bg-yellow-500 text-black p-3 rounded-lg shadow-xl z-[9999]`}
                         style={{ left: `${balloonPos.left}px`, top: `${balloonPos.top}px` }}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -736,7 +736,7 @@ export default function Home() {
 
       {/* Modal de criar novo grupo */}
       {showNewGroupInput && viewMode === 'kanban' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowNewGroupInput(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={() => setShowNewGroupInput(false)}>
           <div className="bg-dark-surface border border-dark-border rounded-lg p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Criar Novo Grupo</h3>
             <input

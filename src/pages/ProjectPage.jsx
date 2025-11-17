@@ -854,7 +854,7 @@ export default function ProjectPage() {
 
       {/* Modal de edição de links */}
       {isEditingLinks && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-dark-surface border border-dark-border rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-semibold text-white mb-4">Editar Links</h3>
             
