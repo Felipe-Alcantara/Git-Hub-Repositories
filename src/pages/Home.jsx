@@ -21,11 +21,7 @@ export default function Home() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [isGistModalOpen, setIsGistModalOpen] = useState(false);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(() => {
-    // Mostrar tutorial automaticamente na primeira visita se não definido
-    const hidden = localStorage.getItem('hideTutorial');
-    return hidden === 'true' ? false : false; // default false; user opens with button
-  });
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [showHelpBalloon, setShowHelpBalloon] = useState(false);
   const [balloonPos, setBalloonPos] = useState({ vertical: 'top', left: 0, top: 0, arrowLeft: 0 });
   const helpButtonRef = useRef(null);
@@ -71,8 +67,7 @@ export default function Home() {
   useEffect(() => {
     try {
       const alreadySeen = localStorage.getItem('seenHelpBalloon');
-      const hideTutorial = localStorage.getItem('hideTutorial');
-      if (!alreadySeen && !hideTutorial) {
+      if (!alreadySeen) {
         // Aguarda um pequeno delay para não competir com o carregamento inicial
         const timer = setTimeout(() => setShowHelpBalloon(true), 800);
         return () => clearTimeout(timer);

@@ -2,20 +2,12 @@ import { useState, useEffect } from 'react';
 import { X, HelpCircle } from 'lucide-react';
 
 export default function TutorialModal({ isOpen, onClose }) {
-  const [dontShow, setDontShow] = useState(false);
-
   useEffect(() => {
     if (!isOpen) return;
-    const saved = localStorage.getItem('hideTutorial');
-    if (saved === 'true') {
-      onClose();
-    }
+    // Não verificar ou usar localStorage para ocultar o tutorial — sempre permitir a abertura
   }, [isOpen, onClose]);
 
   const handleClose = () => {
-    if (dontShow) {
-      localStorage.setItem('hideTutorial', 'true');
-    }
     onClose();
   };
 
@@ -34,10 +26,7 @@ export default function TutorialModal({ isOpen, onClose }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-xs text-gray-400 flex items-center gap-2">
-              <input type="checkbox" className="accent-purple-500" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} />
-              Não mostrar novamente
-            </label>
+            {/* checkbox 'Não mostrar novamente' removido por solicitação */}
             <button onClick={handleClose} className="text-gray-400 hover:text-white"><X className="w-6 h-6" /></button>
           </div>
         </div>
