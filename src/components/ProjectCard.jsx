@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle } from 'lucide-react';
+import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle, FileText, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
@@ -50,6 +50,8 @@ export default function ProjectCard({
       onToggleSelect(project.id);
     }
   };
+
+  const hasReadme = Boolean(project.details?.readme && project.details?.readme.trim().length > 0);
 
   // Layout compacto estilo post-it para modo Kanban
   if (viewMode === 'kanban') {
@@ -149,6 +151,20 @@ export default function ProjectCard({
             {totalLines > 0 && (
               <span>{(totalLines / 1000).toFixed(0)}k</span>
             )}
+            {/* Indicação de README */}
+            <div className="ml-2 flex items-center gap-1">
+              {hasReadme ? (
+                <div title="README disponível" className="flex items-center gap-1 text-green-400">
+                  <FileText className="w-3 h-3" />
+                  <span className="text-xs text-green-300">README</span>
+                </div>
+              ) : (
+                <div title="Sem README" className="flex items-center gap-1 text-gray-400">
+                  <AlertCircle className="w-3 h-3" />
+                  <span className="text-xs">Sem README</span>
+                </div>
+              )}
+            </div>
           </div>
           
           <button
@@ -265,6 +281,21 @@ export default function ProjectCard({
                   <span>{totalLines.toLocaleString('pt-BR')} linhas</span>
                 </div>
               )}
+
+              {/* Indicação de README */}
+              <div className="flex items-center gap-1">
+                {hasReadme ? (
+                  <div title="README disponível" className="flex items-center gap-1 text-green-400">
+                    <FileText className="w-3 h-3" />
+                    <span className="text-xs text-green-300">README</span>
+                  </div>
+                ) : (
+                  <div title="Sem README" className="flex items-center gap-1 text-gray-400">
+                    <AlertCircle className="w-3 h-3" />
+                    <span className="text-xs">Sem README</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -306,6 +337,19 @@ export default function ProjectCard({
                 📋 {project.group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
               </span>
             )}
+
+            {/* Badge README para modos com ações */}
+            <div className="mt-1">
+              {hasReadme ? (
+                <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/30">
+                  <FileText className="inline w-3 h-3 mr-1" /> README
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 bg-gray-800/30 text-gray-400 text-xs rounded border border-gray-700/30">
+                  <AlertCircle className="inline w-3 h-3 mr-1" /> Sem README
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -361,6 +405,8 @@ export default function ProjectCard({
           <h3 className="text-xl font-semibold text-white group-hover:text-blue-400 transition-colors break-normal line-clamp-2 overflow-hidden w-full">
             {project.name || 'Projeto sem nome'}
           </h3>
+          {/* Indicação de README no canto superior direito (visível em grid) */}
+          {/* Removed top-right README icon for grid to avoid duplication with group badge */}
         </div>
 
         {/* Nome do autor/owner */}
@@ -412,9 +458,33 @@ export default function ProjectCard({
         {/* Grupo Kanban */}
         {project.group && (
           <div className="mb-3">
-            <span className="inline-block px-2.5 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/30">
-              📋 {project.group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-block px-2.5 py-1 bg-green-500/10 text-green-400 text-xs rounded-full border border-green-500/30">
+                📋 {project.group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </span>
+
+              {/* Mostrar ícone de README ao lado do grupo somente no modo grade */}
+              {viewMode === 'grid' && (
+                <span
+                  title={hasReadme ? 'README disponível' : 'Sem README'}
+                  className={`inline-block px-2.5 py-1 text-xs rounded-full border ${
+                    hasReadme ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-gray-800/30 text-gray-400 border-gray-700/30'
+                  }`}
+                >
+                  {hasReadme ? (
+                    <>
+                      <FileText className="inline w-3.5 h-3.5 mr-1 align-middle" />
+                      README disponível
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="inline w-3.5 h-3.5 mr-1 align-middle" />
+                      Sem README
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
         )}
 
