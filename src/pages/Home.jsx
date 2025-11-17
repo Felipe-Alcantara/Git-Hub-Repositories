@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 // DnD Kit imports para animação em tempo real na reordenação
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
@@ -26,6 +26,10 @@ export default function Home() {
     const hidden = localStorage.getItem('hideTutorial');
     return hidden === 'true' ? false : false; // default false; user opens with button
   });
+  const [showHelpBalloon, setShowHelpBalloon] = useState(false);
+  const [balloonPos, setBalloonPos] = useState({ vertical: 'top', left: 0, top: 0, arrowLeft: 0 });
+  const helpButtonRef = useRef(null);
+  const balloonRef = useRef(null);
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +66,60 @@ export default function Home() {
     });
     return Array.from(ownersSet).sort();
   }, [projects]);
+
+  // Mostrar balão de ajuda na primeira visita — somente se não ocultaram o tutorial
+  useEffect(() => {
+    try {
+      const alreadySeen = localStorage.getItem('seenHelpBalloon');
+      const hideTutorial = localStorage.getItem('hideTutorial');
+      if (!alreadySeen && !hideTutorial) {
+        // Aguarda um pequeno delay para não competir com o carregamento inicial
+        const timer = setTimeout(() => setShowHelpBalloon(true), 800);
+        return () => clearTimeout(timer);
+      }
+    } catch (err) {
+      // localStorage pode falhar em ambientes restritos; ignorar
+    }
+  }, []);
+
+  // Recalculate balloon position to keep it on-screen
+  useEffect(() => {
+    if (!showHelpBalloon) return;
+      const updatePos = () => {
+      const btn = helpButtonRef.current?.getBoundingClientRect();
+      const bal = balloonRef.current?.getBoundingClientRect();
+      if (!btn || !bal) return;
+
+      const viewportWidth = window.innerWidth;
+      const spaceAbove = btn.top;
+      const spaceBelow = window.innerHeight - btn.bottom;
+
+      // Decide vertical placement (prefer above if there's room, otherwise below)
+      const vertical = spaceAbove > bal.height + 12 ? 'top' : 'bottom';
+
+      // Horizontal: align center to the button, but keep inside viewport with padding
+      const desiredLeft = btn.left + (btn.width / 2) - (bal.width / 2);
+      const maxLeft = Math.max(8, viewportWidth - bal.width - 8);
+      const left = Math.min(Math.max(8, desiredLeft), maxLeft);
+
+      // Top position in pixels relative to viewport
+      const top = vertical === 'top' ? btn.top - bal.height - 12 : btn.bottom + 12;
+
+      // Arrow location inside the balloon: center over the button
+      const arrowHalf = 6; // half of 12px arrow (w-3 h-3)
+      const arrowLeft = Math.min(Math.max(10, btn.left + (btn.width / 2) - left - arrowHalf), bal.width - 10);
+
+      setBalloonPos({ vertical, left, top, arrowLeft });
+    };
+
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    window.addEventListener('scroll', updatePos, { passive: true });
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      window.removeEventListener('scroll', updatePos);
+    };
+  }, [showHelpBalloon]);
 
   const kanbanGroups = useMemo(() => {
     const customGroups = getCustomGroups();
@@ -369,13 +427,51 @@ export default function Home() {
 
               <div className="flex gap-3">
                 {/* Compact help button to preserve header layout */}
-                <button
-                  onClick={() => setIsTutorialOpen(true)}
-                  className="p-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors shadow-sm"
-                  title="Como funciona"
-                >
-                  <HelpCircle className="w-5 h-5" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsTutorialOpen(true);
+                      try { localStorage.setItem('seenHelpBalloon', 'true'); } catch {}
+                      setShowHelpBalloon(false);
+                    }}
+                    ref={helpButtonRef}
+                    className="p-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors shadow-sm"
+                    title="Como funciona"
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                  </button>
+
+                  {/* Balão de indicação mostrado uma única vez */}
+                  {showHelpBalloon && (
+                    <div
+                      ref={balloonRef}
+                      className={`fixed w-64 bg-yellow-500 text-black p-3 rounded-lg shadow-xl z-50`}
+                        style={{ left: `${balloonPos.left}px`, top: `${balloonPos.top}px` }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-semibold">Dica rápida</div>
+                          <div className="text-xs">Clique aqui em "Como funciona" para ver um tutorial rápido sobre o site.</div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            try { localStorage.setItem('seenHelpBalloon', 'true'); } catch {}
+                            setShowHelpBalloon(false);
+                          }}
+                          className="text-black/70 hover:text-black p-1"
+                          aria-label="Fechar dica"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {/* Arrow / pointer */}
+                      <div
+                        className={`absolute w-3 h-3 transform rotate-45 bg-yellow-500`}
+                        style={{ left: `${balloonPos.arrowLeft}px`, [balloonPos.vertical === 'top' ? 'bottom' : 'top']: '-6px' }}
+                      />
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsTokenModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
