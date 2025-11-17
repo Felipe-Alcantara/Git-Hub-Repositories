@@ -50,7 +50,7 @@ export default function TutorialModal({ isOpen, onClose }) {
 
           <section>
             <h3 className="text-lg font-semibold text-white mb-2">➕ Adicionar projeto</h3>
-            <p>Clique em <strong>Novo Projeto</strong> para criar manualmente ou cole a URL do GitHub para importar automaticamente o repositório (inclui README se disponível).</p>
+            <p>Clique em <strong>Novo Projeto</strong> para criar manualmente ou cole a URL do GitHub para importar automaticamente o repositório (inclui README se disponível). Você pode importar repositórios de qualquer perfil ou organização, não precisa ser o seu próprio repositório.</p>
           </section>
 
           <section>
@@ -60,7 +60,7 @@ export default function TutorialModal({ isOpen, onClose }) {
 
           <section>
             <h3 className="text-lg font-semibold text-white mb-2">⚙️ Configurações</h3>
-            <p>Configure tokens do GitHub e a chave do Google Gemini em <strong>Configurações de API</strong> — acesso seguro salvo no navegador.</p>
+            <p>Configure tokens do GitHub e a chave do Google Gemini em <strong>Configurações de API</strong>, acesso seguro salvo no navegador.</p>
           </section>
 
           <section>
