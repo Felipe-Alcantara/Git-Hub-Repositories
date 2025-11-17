@@ -3,9 +3,10 @@ import { useState, useMemo, useEffect } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Settings, User } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Settings, User, HelpCircle } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
+import TutorialModal from '../components/TutorialModal';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
 import ImportProfileModal from '../components/ImportProfileModal';
@@ -20,6 +21,11 @@ export default function Home() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isTokenModalOpen, setIsTokenModalOpen] = useState(false);
   const [isGistModalOpen, setIsGistModalOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(() => {
+    // Mostrar tutorial automaticamente na primeira visita se não definido
+    const hidden = localStorage.getItem('hideTutorial');
+    return hidden === 'true' ? false : false; // default false; user opens with button
+  });
   const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
@@ -362,6 +368,14 @@ export default function Home() {
               </div>
 
               <div className="flex gap-3">
+                {/* Compact help button to preserve header layout */}
+                <button
+                  onClick={() => setIsTutorialOpen(true)}
+                  className="p-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg transition-colors shadow-sm"
+                  title="Como funciona"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                </button>
                 <button
                   onClick={() => setIsTokenModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
@@ -763,6 +777,18 @@ export default function Home() {
         projects={projects}
         onProjectsImported={handleBulkImport}
       />
+
+      {/* Floating help button */}
+      <button
+        onClick={() => setIsTutorialOpen(true)}
+        title="Como funciona"
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-yellow-500 hover:bg-yellow-600 text-black shadow-2xl transition-colors animate-pulse"
+      >
+        <HelpCircle className="w-6 h-6" />
+      </button>
+
+      {/* Tutorial modal */}
+      <TutorialModal isOpen={isTutorialOpen} onClose={() => setIsTutorialOpen(false)} />
     </div>
   );
 }
