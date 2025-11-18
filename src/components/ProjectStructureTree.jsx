@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -74,7 +74,11 @@ function TreeNode({
   onEditNameChange,
   onConfirmRename,
   onCancelRename,
-  onStartRename
+  onStartRename,
+  selectable = false,
+  selectedSet = new Set(),
+  onSelectChange,
+  readOnly = false
 }) {
   const {
     attributes,
@@ -141,6 +145,18 @@ function TreeNode({
           )
         ) : (
           <File className={`w-4 h-4 flex-shrink-0 ${getFileIcon(node.name)}`} />
+        )}
+
+        {/* Checkbox para seleção */}
+        {selectable && (
+          <input
+            type="checkbox"
+            checked={selectedSet.has(node.id)}
+            onChange={(e) => onSelectChange(node.id, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-3 h-3 text-blue-500 bg-dark-bg border-gray-600 rounded focus:ring-blue-500 focus:ring-1"
+            disabled={readOnly}
+          />
         )}
 
         {/* Nome do item (editável) */}
@@ -258,7 +274,7 @@ function TreeNode({
   );
 }
 
-export default function ProjectStructureTree({ initialData, onSave }) {
+export default function ProjectStructureTree({ initialData, onSave, selectable = false, selectedIds = [], onSelectChange, repo }) {
   // Função para ordenar a árvore: pastas primeiro, depois alfabeticamente
   const sortTree = (nodes) => {
     if (!nodes || nodes.length === 0) return nodes;
@@ -311,6 +327,9 @@ export default function ProjectStructureTree({ initialData, onSave }) {
   const [editingName, setEditingName] = useState('');
   const [creatingType, setCreatingType] = useState(null);
   const [creatingParentId, setCreatingParentId] = useState(null);
+  const [selectedSet, setSelectedSet] = useState(new Set(selectedIds || []));
+  const [loadingRepo, setLoadingRepo] = useState(false);
+  const [repoError, setRepoError] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -327,6 +346,103 @@ export default function ProjectStructureTree({ initialData, onSave }) {
     onSave(sortedTree);
     console.log('[ProjectStructureTree] Árvore atualizada, ordenada e salva');
   };
+
+  // Sincroniza selectedIds externos com o set interno
+  useEffect(() => {
+    setSelectedSet(new Set(selectedIds || []));
+  }, [selectedIds]);
+
+  // Converte a resposta "git tree" do GitHub em formato de árvore aninhada usado pelo componente
+  const buildTreeFromGitPaths = (treeItems) => {
+    const root = [];
+    const nodeByPath = new Map();
+
+    const ensureFolder = (pathSegments) => {
+      let path = '';
+      let parentArray = root;
+      for (let i = 0; i < pathSegments.length; i++) {
+        const seg = pathSegments[i];
+        path = path ? `${path}/${seg}` : seg;
+        if (!nodeByPath.has(path)) {
+          // Sempre criar como pasta quando garantimos a estrutura
+          const newNode = {
+            id: path,
+            name: seg,
+            type: 'folder',
+            expanded: false,
+            children: []
+          };
+          nodeByPath.set(path, newNode);
+          parentArray.push(newNode);
+        }
+        const node = nodeByPath.get(path);
+        parentArray = node.children || [];
+      }
+    };
+
+    for (const item of treeItems) {
+      const parts = item.path.split('/');
+      // se for um blob (arquivo), crie folhas; se for tree, crie pastas
+      if (item.type === 'tree') {
+        // garante que a pasta existe
+        ensureFolder(parts);
+      } else if (item.type === 'blob') {
+        // cria a estrutura de pastas e o arquivo final
+        const dirParts = parts.slice(0, -1);
+        if (dirParts.length > 0) ensureFolder(dirParts);
+        // file path
+        const parentPath = dirParts.join('/');
+        const filePath = parts.join('/');
+        const fileNode = {
+          id: filePath,
+          name: parts[parts.length - 1],
+          type: 'file'
+        };
+        // Proteções: se não achou parent (inconsistência do tree), usar root
+        const parent = parentPath ? nodeByPath.get(parentPath) : null;
+        const parentArray = parent ? (parent.children || root) : root;
+        // evita duplicata
+        if (!parentArray.find(n => n.id === fileNode.id)) parentArray.push(fileNode);
+      }
+    }
+
+    // normaliza: pastas sem children -> children: []
+    const normalize = (nodes) => nodes.map(n => n.type === 'folder' ? ({ ...n, children: normalize(n.children || []) }) : n);
+    return sortTree(normalize(root));
+  };
+
+  const fetchGithubTree = async ({ owner, name, branch, token }) => {
+    try {
+      setLoadingRepo(true);
+      setRepoError(null);
+      // GET /repos/:owner/:repo/git/trees/:branch?recursive=1  (branch funciona)
+      const url = `https://api.github.com/repos/${owner}/${name}/git/trees/${encodeURIComponent(branch || 'HEAD')}?recursive=1`;
+      const headers = token ? { Authorization: `token ${token}` } : {};
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || `Erro ao buscar árvore: ${res.status}`);
+      }
+      const data = await res.json();
+      // data.tree -> array com tipo 'blob' (arquivo) e 'tree' (pasta)
+      const newTree = buildTreeFromGitPaths(data.tree || []);
+      setTree(newTree);
+      setLoadingRepo(false);
+      // opcional: salvar automático
+      onSave?.(newTree);
+    } catch (error) {
+      setRepoError(error.message);
+      setLoadingRepo(false);
+      console.error('[ProjectStructureTree] erro ao carregar repo:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (repo?.owner && repo?.name) {
+      fetchGithubTree(repo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repo?.owner, repo?.name, repo?.branch]);
 
   // Função para encontrar um nó por ID
   const findNode = (nodes, id) => {
@@ -468,6 +584,26 @@ export default function ProjectStructureTree({ initialData, onSave }) {
     updateTree(newTree);
   };
 
+  // Selection helpers - seleciona recursivamente os filhos
+  const collectChildIds = (node) => {
+    const ids = [node.id];
+    if (node.children) {
+      for (const c of node.children) ids.push(...collectChildIds(c));
+    }
+    return ids;
+  };
+
+  const handleSelectChange = (id, checked) => {
+    const newSet = new Set(selectedSet);
+    const node = findNode(tree, id);
+    if (!node) return;
+    const ids = collectChildIds(node);
+    if (checked) ids.forEach(i => newSet.add(i));
+    else ids.forEach(i => newSet.delete(i));
+    setSelectedSet(newSet);
+    onSelectChange?.(Array.from(newSet));
+  };
+
   // Toggle expand/collapse de pasta
   const toggleFolder = (id) => {
     const updateNode = (nodes) => {
@@ -573,7 +709,11 @@ export default function ProjectStructureTree({ initialData, onSave }) {
       <div className="h-full flex flex-col bg-dark-bg relative">
         {/* Toolbar */}
         <div className="flex items-center justify-between p-3 border-b border-dark-border">
-          <span className="text-sm text-gray-400 font-semibold">EXPLORADOR</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400 font-semibold">EXPLORADOR</span>
+            {loadingRepo && <span className="text-xs text-blue-400">Carregando...</span>}
+            {repoError && <span className="text-xs text-red-400">Erro: {repoError}</span>}
+          </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => startCreating('file')}
@@ -609,6 +749,10 @@ export default function ProjectStructureTree({ initialData, onSave }) {
               onConfirmRename={confirmRename}
               onCancelRename={cancelRename}
               onStartRename={startRename}
+              selectable={selectable}
+              selectedSet={selectedSet}
+              onSelectChange={handleSelectChange}
+              readOnly={loadingRepo || !!repoError}
             />
           ))}
           

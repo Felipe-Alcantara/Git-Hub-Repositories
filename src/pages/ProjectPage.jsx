@@ -9,6 +9,7 @@ import ModalShell from '../components/ModalShell';
 import remarkGfm from 'remark-gfm';
 import DrawingCanvas from '../components/DrawingCanvas';
 import ProjectStructureTree from '../components/ProjectStructureTree';
+import { parseGitHubUrl, getGitHubToken } from '../utils/github';
 import AIExplanationPanel from '../components/AIExplanationPanel';
 
 const sections = [
@@ -728,6 +729,21 @@ export default function ProjectPage() {
                           <ProjectStructureTree
                             initialData={editedProject.details[section.key]}
                             onSave={(data) => handleDetailChange(section.key, data)}
+                            {...(section.key === 'structure' ? {
+                              repo: (() => {
+                              const parsed = parseGitHubUrl(editedProject?.repoUrl || project?.repoUrl || '');
+                              if (parsed) {
+                                return { owner: parsed.owner, name: parsed.repo, branch: editedProject?.defaultBranch || undefined, token: getGitHubToken() };
+                              }
+                              // Fallback: usar o repositório atual se nenhum repoUrl estiver configurado
+                              return { 
+                                owner: 'Felipe-Alcantara', 
+                                name: 'Git-Hub-Repositories', 
+                                branch: 'main', 
+                                token: getGitHubToken() 
+                              };
+                            })()
+                            } : {})}
                           />
                         </div>
                       </div>
