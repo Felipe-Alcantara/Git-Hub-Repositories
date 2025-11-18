@@ -204,7 +204,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
 
   return (
     <ModalShell isOpen={isOpen} onClose={handleClose}>
-      <div className="bg-dark-surface border border-dark-border rounded-lg w-full max-w-[1200px] max-h-[95vh] overflow-hidden flex flex-col">
+      <div className="bg-dark-surface border border-dark-border rounded-lg w-[94vw] max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border">
           <div className="flex items-center gap-3">
