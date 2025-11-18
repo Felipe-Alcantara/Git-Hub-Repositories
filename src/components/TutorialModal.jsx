@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ModalShell from './ModalShell';
 import { X, HelpCircle } from 'lucide-react';
 
 export default function TutorialModal({ isOpen, onClose }) {
@@ -11,10 +12,8 @@ export default function TutorialModal({ isOpen, onClose }) {
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4">
+    <ModalShell isOpen={isOpen} onClose={handleClose}>
       <div className="bg-dark-surface border border-dark-border rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border sticky top-0 bg-dark-surface z-10">
@@ -71,6 +70,6 @@ export default function TutorialModal({ isOpen, onClose }) {
           <button onClick={handleClose} className="px-4 py-2 bg-dark-hover rounded-lg text-white hover:bg-dark-border">Fechar</button>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

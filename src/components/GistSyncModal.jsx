@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ModalShell from './ModalShell';
 import { X, Upload, Download, Cloud, Check, AlertCircle, Copy, Trash2 } from 'lucide-react';
 import { syncToGist, loadFromGist, saveGistId, loadGistId, clearGistId, deleteGist } from '../utils/gist';
 import { getGitHubToken } from '../utils/github';
@@ -146,10 +147,8 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50">
+    <ModalShell isOpen={isOpen} onClose={onClose} overlayClassName="bg-black/50">
       <div className="bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
@@ -453,6 +452,6 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
           )}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

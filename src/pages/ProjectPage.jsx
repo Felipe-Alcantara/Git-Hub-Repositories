@@ -5,6 +5,7 @@ import { getProjectById, updateProject } from '../utils/storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
+import ModalShell from '../components/ModalShell';
 import remarkGfm from 'remark-gfm';
 import DrawingCanvas from '../components/DrawingCanvas';
 import ProjectStructureTree from '../components/ProjectStructureTree';
@@ -854,7 +855,7 @@ export default function ProjectPage() {
 
       {/* Modal de edição de links */}
       {isEditingLinks && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+        <ModalShell isOpen={isEditingLinks} onClose={() => setIsEditingLinks(false)} overlayClassName="bg-black/50">
           <div className="bg-dark-surface border border-dark-border rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-semibold text-white mb-4">Editar Links</h3>
             
@@ -922,7 +923,7 @@ export default function ProjectPage() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalShell>
       )}
       
       {/* Painel de explicação movido para o painel direito (redimensionável) */}

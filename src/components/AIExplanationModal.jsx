@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ModalShell from './ModalShell';
 import { X, Sparkles, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { explainProjectWithGemini, loadGeminiApiKey } from '../utils/gemini';
 import ReactMarkdown from 'react-markdown';
@@ -43,10 +44,8 @@ export default function AIExplanationModal({ isOpen, onClose, project }) {
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4">
+    <ModalShell isOpen={isOpen} onClose={handleClose}>
       <div className="bg-dark-surface border border-dark-border rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border">
@@ -164,6 +163,6 @@ export default function AIExplanationModal({ isOpen, onClose, project }) {
           </div>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

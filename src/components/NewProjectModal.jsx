@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ModalShell from './ModalShell';
 import { X, Download } from 'lucide-react';
 import { fetchCompleteGitHubInfo } from '../utils/github';
 import { getProjects } from '../utils/storage';
@@ -122,10 +123,8 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4">
+    <ModalShell isOpen={isOpen} onClose={onClose}>
       <div className="bg-dark-surface border border-dark-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border sticky top-0 bg-dark-surface">
@@ -315,6 +314,6 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
           </div>
         </form>
       </div>
-    </div>
+    </ModalShell>
   );
 }
