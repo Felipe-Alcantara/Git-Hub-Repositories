@@ -82,11 +82,37 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
         const extractedUsername = extractUsername(username);
         
         // Busca linguagens do repositório
-        const languagesData = await fetchGitHubLanguages(extractedUsername, repo.name);
+        let languagesData = {};
+        try {
+          languagesData = await fetchGitHubLanguages(extractedUsername, repo.name);
+        } catch (err) {
+          if (err.message && err.message.includes('Limite de requisições')) {
+            setError(err.message);
+            setLoading(false);
+            return;
+          }
+          // caso contrário, segue com objecto vazia
+          languagesData = {};
+        }
         const languageNames = Object.keys(languagesData).sort((a, b) => languagesData[b] - languagesData[a]);
         
+        // Se fetchGitHubLanguages lançar um erro de 403, propaga para exibir mensagem
+        // (fetchGitHubLanguages agora joga erro quando 403)
+        
         // Busca o README do repositório
-        const readme = await fetchGitHubReadme(extractedUsername, repo.name);
+        let readme = '';
+        try {
+          readme = await fetchGitHubReadme(extractedUsername, repo.name);
+        } catch (err) {
+          // Se houve erro 403 de rate limit, mostre mensagem para o usuário e aborta
+          if (err.message && err.message.includes('Limite de requisições')) {
+            setError(err.message);
+            setLoading(false);
+            return;
+          }
+          // Caso contrário, apenas continue com README vazio
+          readme = '';
+        }
         
         // Detecta GitHub Pages
         const pagesUrl = repo.homepage || `https://${extractedUsername}.github.io/${repo.name}/`;

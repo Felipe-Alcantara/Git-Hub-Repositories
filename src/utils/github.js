@@ -132,7 +132,11 @@ export async function fetchGitHubLanguages(owner, repo) {
     });
     
     if (!response.ok) {
-      return {};
+        // 403 -> rate limit or permission denied. Propaga mensagem para o chamador
+        if (response.status === 403) {
+          throw new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações ou aguarde.');
+        }
+        return {};
     }
     
     const data = await response.json();
@@ -230,8 +234,11 @@ export async function fetchGitHubReadme(owner, repo) {
     );
 
     if (!response.ok) {
-      // README não encontrado ou erro
+        // README não encontrado ou erro
       console.warn(`[GitHub] README não encontrado para ${owner}/${repo} - Status: ${response.status}`);
+        if (response.status === 403) {
+          throw new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações ou aguarde.');
+        }
       return '';
     }
 
