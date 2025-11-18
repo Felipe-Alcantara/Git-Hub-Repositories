@@ -80,8 +80,8 @@ function TreeNode({
   selectable = false,
   selectedSet = new Set(),
   onSelectChange,
-  readOnly = false
-  ,onOpenFile
+  readOnly = false,
+  onOpenFile
 }) {
   const {
     attributes,
@@ -284,8 +284,7 @@ function TreeNode({
               onConfirmRename={onConfirmRename}
               onCancelRename={onCancelRename}
               onStartRename={onStartRename}
-              onOpenFile={fetchFileContent}
-              onOpenFile={fetchFileContent}
+              onOpenFile={onOpenFile}
             />
           ))}
         </div>
@@ -828,6 +827,7 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
               selectedSet={selectedSet}
               onSelectChange={handleSelectChange}
               readOnly={loadingRepo || !!repoError}
+              onOpenFile={fetchFileContent}
             />
           ))}
           
