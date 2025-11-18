@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Folder, FolderOpen, File, Plus, Trash2, ChevronRight, ChevronDown, Edit2, Check, X } from 'lucide-react';
+import { Folder, FolderOpen, File, Plus, Trash2, ChevronRight, ChevronDown, Edit2, Check, X, ExternalLink, FileText } from 'lucide-react';
+import ModalShell from './ModalShell';
+import { getGitHubToken } from '../utils/github';
 
 // Componente de zona de drop para a raiz
 function RootDropZone() {
@@ -79,6 +81,7 @@ function TreeNode({
   selectedSet = new Set(),
   onSelectChange,
   readOnly = false
+  ,onOpenFile
 }) {
   const {
     attributes,
@@ -117,6 +120,9 @@ function TreeNode({
         style={{ paddingLeft: `${paddingLeft + 8}px` }}
         {...attributes}
         {...listeners}
+        onDoubleClick={() => {
+          if (!isFolder && typeof onOpenFile === 'function') onOpenFile(node);
+        }}
       >
         {/* Ícone de expandir/colapsar (só para pastas) */}
         {isFolder && (
@@ -233,6 +239,18 @@ function TreeNode({
               >
                 <Edit2 className="w-3 h-3 text-gray-400" />
               </button>
+              {!isFolder && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    typeof onOpenFile === 'function' && onOpenFile(node);
+                  }}
+                  className="p-1 hover:bg-dark-border rounded transition-colors"
+                  title="Abrir arquivo"
+                >
+                  <FileText className="w-3 h-3 text-gray-400" />
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -266,6 +284,8 @@ function TreeNode({
               onConfirmRename={onConfirmRename}
               onCancelRename={onCancelRename}
               onStartRename={onStartRename}
+              onOpenFile={fetchFileContent}
+              onOpenFile={fetchFileContent}
             />
           ))}
         </div>
@@ -274,7 +294,7 @@ function TreeNode({
   );
 }
 
-export default function ProjectStructureTree({ initialData, onSave, selectable = false, selectedIds = [], onSelectChange, repo }) {
+export default function ProjectStructureTree({ initialData, onSave, selectable = false, selectedIds, onSelectChange, repo }) {
   // Função para ordenar a árvore: pastas primeiro, depois alfabeticamente
   const sortTree = (nodes) => {
     if (!nodes || nodes.length === 0) return nodes;
@@ -330,6 +350,11 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
   const [selectedSet, setSelectedSet] = useState(new Set(selectedIds || []));
   const [loadingRepo, setLoadingRepo] = useState(false);
   const [repoError, setRepoError] = useState(null);
+  const [fileModalOpen, setFileModalOpen] = useState(false);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState(null);
+  const [fileContent, setFileContent] = useState('');
+  const [currentFile, setCurrentFile] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -397,6 +422,7 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
           id: filePath,
           name: parts[parts.length - 1],
           type: 'file'
+          , sha: item.sha
         };
         // Proteções: se não achou parent (inconsistência do tree), usar root
         const parent = parentPath ? nodeByPath.get(parentPath) : null;
@@ -434,6 +460,55 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
       setRepoError(error.message);
       setLoadingRepo(false);
       console.error('[ProjectStructureTree] erro ao carregar repo:', error);
+    }
+  };
+
+  // Ler conteúdo do arquivo do GitHub (via endpoint contents)
+  const fetchFileContent = async (node) => {
+    if (!repo || !repo.owner || !repo.name) {
+      setFileError('Repositório não configurado');
+      setFileModalOpen(true);
+      return;
+    }
+
+    setFileError(null);
+    setFileContent('');
+    setFileLoading(true);
+    setCurrentFile(node);
+    try {
+      const owner = repo.owner;
+      const name = repo.name;
+      const branch = repo.branch || 'HEAD';
+      const token = repo.token || getGitHubToken();
+
+      const url = `https://api.github.com/repos/${owner}/${name}/contents/${encodeURIComponent(node.id)}?ref=${encodeURIComponent(branch)}`;
+      const headers = token ? { Authorization: `token ${token}` } : {};
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Erro ao buscar arquivo (${res.status})`);
+      }
+
+      const data = await res.json();
+      if (!data.content) throw new Error('Conteúdo não disponível');
+
+      // GitHub retorna base64, geralmente UTF-8; decodificação simples
+      const decoded = atob(data.content.replace(/\n/g, ''));
+      try {
+        // mantém caracteres UTF-8 corretamente
+        const uri = decodeURIComponent(escape(decoded));
+        setFileContent(uri);
+      } catch (e) {
+        setFileContent(decoded);
+      }
+
+      setFileModalOpen(true);
+      setFileLoading(false);
+    } catch (error) {
+      setFileError(error.message);
+      setFileLoading(false);
+      setFileModalOpen(true);
+      console.error('[ProjectStructureTree] erro ao ler arquivo:', error);
     }
   };
 
@@ -833,6 +908,44 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
           </div>
         )}
       </div>
+
+      {/* Modal de visualização de arquivo */}
+      <ModalShell isOpen={fileModalOpen} onClose={() => setFileModalOpen(false)} overlayClassName="bg-black/60">
+        <div className="w-[80vw] max-w-4xl h-[80vh] overflow-hidden bg-dark-surface border border-dark-border rounded-lg flex flex-col">
+          <div className="flex items-center justify-between p-3 border-b border-dark-border">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-400" />
+              <div>
+                <div className="text-sm text-white">{currentFile?.name || 'Arquivo'}</div>
+                <div className="text-xs text-gray-400">{currentFile?.id}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard?.writeText(fileContent || '').then(() => {
+                    // opcional: feedback
+                  });
+                }}
+                className="px-3 py-1 bg-dark-border rounded text-white text-sm"
+              >
+                Copiar
+              </button>
+              <button onClick={() => setFileModalOpen(false)} className="px-3 py-1 bg-red-700 hover:bg-red-800 rounded text-white text-sm">Fechar</button>
+            </div>
+          </div>
+
+          <div className="p-4 overflow-auto flex-1">
+            {fileLoading ? (
+              <div className="text-gray-400 text-sm">Carregando...</div>
+            ) : fileError ? (
+              <div className="text-red-400 text-sm">Erro: {fileError}</div>
+            ) : (
+              <pre className="text-xs text-white whitespace-pre-wrap">{fileContent}</pre>
+            )}
+          </div>
+        </div>
+      </ModalShell>
 
       {/* Drag Overlay */}
       <DragOverlay>
