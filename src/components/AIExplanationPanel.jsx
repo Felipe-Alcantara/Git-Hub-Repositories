@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Loader2, Send, MessageCircle, Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { explainProjectWithGemini, loadGeminiApiKey, askGeminiQuestion, flattenStructure, collectFilesPreview } from '../utils/gemini';
-import { parseGitHubUrl, fetchGitHubFileContent } from '../utils/github';
+import ProjectStructureTree from './ProjectStructureTree';
+import ModalShell from './ModalShell';
+import { parseGitHubUrl, fetchGitHubFileContent, getGitHubToken } from '../utils/github';
 import { updateProject } from '../utils/storage';
 
 export default function AIExplanationPanel({ visible, onClose, project, activeSection }) {
@@ -13,6 +15,9 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectFilesModalOpen, setSelectFilesModalOpen] = useState(false);
+  const [selectedFileIds, setSelectedFileIds] = useState([]);
+  const [loadingSelectedFiles, setLoadingSelectedFiles] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -348,14 +353,24 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
             disabled={loading}
           />
           <div className="flex flex-col gap-2">
-            <button
-              onClick={loadFilesForAI}
-              disabled={loading}
-              className="px-3 py-1 bg-dark-surface border border-dark-border text-xs rounded hover:border-blue-500 transition-colors"
-              title="Carregar arquivos do repositório para uso da IA"
-            >
-              Enviar contexto
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setSelectFilesModalOpen(true)}
+                disabled={loading}
+                className="px-3 py-1 bg-dark-surface border border-dark-border text-xs rounded hover:border-blue-500 transition-colors"
+                title="Selecionar arquivos ou pastas específicos para carregar contexto"
+              >
+                Selecionar arquivos
+              </button>
+              <button
+                onClick={loadFilesForAI}
+                disabled={loading}
+                className="px-3 py-1 bg-dark-surface border border-dark-border text-xs rounded hover:border-blue-500 transition-colors"
+                title="Carregar arquivos do repositório para uso da IA"
+              >
+                Enviar contexto
+              </button>
+            </div>
             <button
               onClick={sendQuestion}
               disabled={loading || !currentQuestion.trim()}
@@ -370,6 +385,122 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
           Pressione Enter para enviar, Shift+Enter para nova linha
         </div>
       </div>
+      {/* Modal para selecionar arquivos/pastas da estrutura */}
+      <ModalShell isOpen={selectFilesModalOpen} onClose={() => setSelectFilesModalOpen(false)}>
+        <div className="bg-dark-surface border border-dark-border rounded-lg w-[94vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-dark-border">
+            <h4 className="text-white font-semibold">Selecionar arquivos/pastas</h4>
+            <button className="text-gray-400 hover:text-white" onClick={() => setSelectFilesModalOpen(false)}>Fechar</button>
+          </div>
+          <div className="p-4 flex-1 overflow-auto">
+            <p className="text-sm text-gray-400 mb-3">Selecione arquivos ou pastas para enviar para a IA (apenas arquivos serão baixados do GitHub).</p>
+            <ProjectStructureTree
+              initialData={project?.details?.structure || []}
+              onSave={() => {}}
+              selectable={true}
+              selectedIds={selectedFileIds}
+              onSelectChange={(newSelected) => {
+                // ProjectStructureTree passes the full array of selected IDs
+                setSelectedFileIds(newSelected || []);
+              }}
+              repo={(function() {
+                const parsed = parseGitHubUrl(project?.repoUrl || project?.webUrl || '');
+                if (parsed) {
+                  return { owner: parsed.owner, name: parsed.repo, branch: project?.defaultBranch || undefined, token: getGitHubToken() };
+                }
+                return null;
+              })()}
+            />
+          </div>
+          <div className="p-4 border-t border-dark-border flex items-center justify-between">
+            <div className="text-xs text-gray-400">{selectedFileIds.length} arquivo(s) selecionado(s)</div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectFilesModalOpen(false)}
+                className="px-3 py-2 bg-dark-hover hover:bg-dark-border text-white rounded"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={async () => {
+                  // Carregar conteúdo dos arquivos selecionados via API GitHub e atualizar estrutura
+                  const parsed = parseGitHubUrl(project?.repoUrl || project?.webUrl || '');
+                  if (!parsed) {
+                    setError('Repositório inválido ou não configurado.');
+                    return;
+                  }
+
+                  setLoadingSelectedFiles(true);
+                  try {
+                    // Expandir pastas: se algum ID selecionado for pasta, inclui todos os arquivos sob ela
+                    const allFiles = flattenStructure(project?.details?.structure || []);
+                    const selectedPaths = [];
+                    // Helper: find node by id recursively
+                    const findNodeById = (nodes, id) => {
+                      for (const node of nodes) {
+                        if (node.id === id) return node;
+                        if (node.children) {
+                          const found = findNodeById(node.children, id);
+                          if (found) return found;
+                        }
+                      }
+                      return null;
+                    };
+                    for (const id of selectedFileIds) {
+                      const isFolder = findNodeById(project?.details?.structure || [], id)?.type === 'folder';
+                      if (isFolder) {
+                        // incluir todos os arquivos que comecem com `${id}/`
+                        allFiles.forEach(f => {
+                          if (f.path.startsWith(`${id}/`)) selectedPaths.push(f.path);
+                        });
+                      } else {
+                        // é um arquivo (path)
+                        const match = allFiles.find(f => f.path === id);
+                        if (match) selectedPaths.push(id);
+                      }
+                    }
+
+                    const uniquePaths = [...new Set(selectedPaths)];
+
+                    const fetched = await Promise.allSettled(
+                      uniquePaths.map(path => fetchGitHubFileContent(parsed.owner, parsed.repo, path, project?.defaultBranch || 'HEAD'))
+                    );
+
+                    // Atualiza a estrutura com o conteúdo baixado
+                    const newStructure = JSON.parse(JSON.stringify(project.details.structure || []));
+
+                    const addContent = (nodes) => nodes.map(n => {
+                      if (n.type === 'file' && uniquePaths.includes(n.id)) {
+                        const idx = uniquePaths.indexOf(n.id);
+                        const val = fetched[idx];
+                        const content = val?.status === 'fulfilled' ? val.value : '';
+                        return { ...n, content: content || n.content || '' };
+                      }
+                      if (n.children) return { ...n, children: addContent(n.children) };
+                      return n;
+                    });
+
+                    const updated = addContent(newStructure);
+                    updateProject(project.id, { details: { ...project.details, structure: updated } });
+
+                    setMessages(prev => [...prev, { id: Date.now(), type: 'ai', content: `✅ ${selectedFileIds.length} arquivo(s) carregado(s) para análise.` }]);
+                    setSelectFilesModalOpen(false);
+                    setSelectedFileIds([]);
+                  } catch (err) {
+                    setError(err.message || 'Erro ao carregar arquivos selecionados');
+                  } finally {
+                    setLoadingSelectedFiles(false);
+                  }
+                }}
+                disabled={selectedFileIds.length === 0 || loadingSelectedFiles}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingSelectedFiles ? 'Carregando...' : 'Carregar selecionados'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </ModalShell>
     </div>
   );
 }
