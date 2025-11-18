@@ -5,6 +5,7 @@ import { fetchUserRepositories, fetchGitHubLanguages, fetchGitHubReadme } from '
 import { getProjects } from '../utils/storage';
 
 export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenToken }) {
+  // Aceita múltiplos perfis (um por linha). Ex: "Felipe-Alcantara\noutro-user" ou URLs completas.
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,17 +39,44 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
     setSelectedRepos([]);
 
     try {
-      const extractedUsername = extractUsername(username);
-      const repos = await fetchUserRepositories(extractedUsername);
-      
-      if (repos.length === 0) {
-        setError('Nenhum repositório público encontrado');
+      // Permite múltiplos perfis - cada perfil em uma linha
+      const lines = username.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) {
+        setError('Digite um nome de usuário ou URL do perfil do GitHub');
         return;
       }
 
-      setRepositories(repos);
+      const allRepos = [];
+      const errors = [];
+
+      for (const line of lines) {
+        const extractedUsername = extractUsername(line);
+        try {
+          const repos = await fetchUserRepositories(extractedUsername);
+          if (repos.length > 0) {
+            // marca o owner para cada repo para importar depois
+            allRepos.push(...repos.map(r => ({ ...r, owner: extractedUsername })));
+          } else {
+            errors.push(`Nenhum repositório público encontrado para ${extractedUsername}`);
+          }
+        } catch (err) {
+          // registra o erro, mas continua com as outras importações
+          errors.push(err.message || `Erro ao buscar ${extractedUsername}`);
+          if (err.rateLimitInfo) setRateLimit(err.rateLimitInfo);
+        }
+      }
+
+      if (allRepos.length === 0) {
+        setError(errors.length > 0 ? errors.join('; ') : 'Nenhum repositório público encontrado');
+        return;
+      }
+
+      setRepositories(allRepos);
+      if (errors.length > 0) {
+        setError(errors.join('; '));
+      }
       // Seleciona todos por padrão
-      setSelectedRepos(repos.map((_, idx) => idx));
+      setSelectedRepos(allRepos.map((_, idx) => idx));
     } catch (err) {
       // If rate-limited, show a clearer message and provide easy access to token settings
       setError(err.message);
@@ -82,7 +110,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           continue;
         }
         
-        const extractedUsername = extractUsername(username);
+        const extractedUsername = repo.owner || extractUsername(username);
         
         // Busca linguagens do repositório
         let languagesData = {};
@@ -211,7 +239,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
             <Github className="w-6 h-6 text-blue-400" />
             <div>
               <h2 className="text-xl font-semibold text-white">Importar Perfil do GitHub</h2>
-              <p className="text-sm text-gray-400 mt-1">Importe todos os repositórios de um perfil</p>
+              <p className="text-sm text-gray-400 mt-1">Importe os repositórios de um ou mais perfis (um por linha)</p>
             </div>
           </div>
           <button
@@ -230,16 +258,15 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           {/* Busca de usuário */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Nome de usuário ou URL do perfil
+              Nome de usuário ou URL do perfil (um por linha para importar múltiplos)
             </label>
             <div className="flex gap-3">
-              <input
-                type="text"
+              <textarea
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Ex: Felipe-Alcantara ou https://github.com/Felipe-Alcantara"
-                className="flex-1 px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder={"Ex: Felipe-Alcantara ou https://github.com/Felipe-Alcantara\nAdicione outro nome em outra linha para importar vários perfis"}
+                className="flex-1 px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                rows={3}
                 disabled={loading}
               />
               <button
@@ -322,6 +349,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="text-white font-medium truncate">{repo.name}</h4>
+                        <span className="text-xs text-gray-400">@{repo.owner}</span>
                         {repo.language && (
                           <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">
                             {repo.language}
