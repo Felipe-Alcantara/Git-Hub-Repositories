@@ -63,7 +63,7 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
 
   return (
     <ModalShell isOpen={isOpen} onClose={onClose}>
-      <div className={`bg-dark-surface border border-dark-border rounded-lg w-full max-w-[96vw] max-h-[95vh] overflow-y-auto`}>
+      <div className={`bg-dark-surface border border-dark-border rounded-lg w-full max-w-[1200px] max-h-[95vh] overflow-y-auto`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border">
           <div className="flex items-center gap-3">
