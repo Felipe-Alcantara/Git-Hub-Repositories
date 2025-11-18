@@ -4,10 +4,11 @@ import { X, Github, Loader2 } from 'lucide-react';
 import { fetchUserRepositories, fetchGitHubLanguages, fetchGitHubReadme } from '../utils/github';
 import { getProjects } from '../utils/storage';
 
-export default function ImportProfileModal({ isOpen, onClose, onImport }) {
+export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenToken }) {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rateLimit, setRateLimit] = useState(null);
   const [repositories, setRepositories] = useState([]);
   const [selectedRepos, setSelectedRepos] = useState([]);
 
@@ -49,7 +50,9 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
       // Seleciona todos por padrão
       setSelectedRepos(repos.map((_, idx) => idx));
     } catch (err) {
+      // If rate-limited, show a clearer message and provide easy access to token settings
       setError(err.message);
+      if (err.rateLimitInfo) setRateLimit(err.rateLimitInfo);
     } finally {
       setLoading(false);
     }
@@ -107,6 +110,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
           // Se houve erro 403 de rate limit, mostre mensagem para o usuário e aborta
           if (err.message && err.message.includes('Limite de requisições')) {
             setError(err.message);
+            setRateLimit(err.rateLimitInfo || null);
             setLoading(false);
             return;
           }
@@ -186,6 +190,10 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
     }
   };
 
+  const openTokenModal = () => {
+    if (typeof onOpenToken === 'function') onOpenToken();
+  };
+
   const handleClose = () => {
     setUsername('');
     setRepositories([]);
@@ -214,6 +222,9 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
           </button>
         </div>
 
+            {rateLimit && (
+              <div className="text-xs text-gray-400 mt-2">Requisições restantes: {rateLimit.remaining ?? 'desconhecido'}</div>
+            )}
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Busca de usuário */}
@@ -248,12 +259,31 @@ export default function ImportProfileModal({ isOpen, onClose, onImport }) {
             </div>
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
-                <p className="text-red-400 text-sm">{error}</p>
-                {error.includes('Limite de requisições') && (
-                  <p className="text-gray-400 text-xs mt-1">
-                    Clique no botão de configurações (⚙️) no topo da página para adicionar um token do GitHub.
-                  </p>
-                )}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-red-400 text-sm">{error}</p>
+                    {rateLimit && (
+                      <p className="text-gray-400 text-xs mt-1">Requisições restantes: {rateLimit.remaining ?? 'desconhecido'}</p>
+                    )}
+                    {error.includes('Limite de requisições') && (
+                      <p className="text-gray-400 text-xs mt-1">Você atingiu o limite de requisições sem token. Configure um token para continuar.</p>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col gap-2">
+                    <button
+                      onClick={openTokenModal}
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded"
+                    >
+                      Configurar token
+                    </button>
+                    <button
+                      onClick={() => setError('')}
+                      className="px-3 py-1 bg-gray-700 text-white text-sm rounded"
+                    >
+                      Fechar aviso
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

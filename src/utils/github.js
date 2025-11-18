@@ -40,6 +40,43 @@ function getGitHubHeaders() {
   return headers;
 }
 
+// Conveniência: retornar informações de rate limit presentes nos headers
+function getRateLimitInfo(response) {
+  try {
+    const remaining = response.headers.get('x-ratelimit-remaining');
+    const limit = response.headers.get('x-ratelimit-limit');
+    const reset = response.headers.get('x-ratelimit-reset');
+    return {
+      remaining: remaining !== null ? parseInt(remaining, 10) : null,
+      limit: limit !== null ? parseInt(limit, 10) : null,
+      reset: reset !== null ? parseInt(reset, 10) : null, // epoch seconds
+    };
+  } catch (e) {
+    return { remaining: null, limit: null, reset: null };
+  }
+}
+
+// Pequeno helper de retry/backoff para erros temporários
+async function retryableFetch(url, options = {}, attempts = 3, delayMs = 500) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok && (res.status >= 500 && res.status < 600)) {
+        lastErr = new Error(`Server error: ${res.status}`);
+        // espera e tenta de novo
+        await new Promise(r => setTimeout(r, delayMs * Math.pow(2, i)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      await new Promise(r => setTimeout(r, delayMs * Math.pow(2, i)));
+    }
+  }
+  throw lastErr;
+}
+
 /**
  * Extrai owner e repo de uma URL do GitHub
  * @param {string} url - URL do repositório GitHub
@@ -127,19 +164,27 @@ export async function fetchGitHubRepo(owner, repo) {
  */
 export async function fetchGitHubLanguages(owner, repo) {
   try {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/languages`, {
+    const response = await retryableFetch(`https://api.github.com/repos/${owner}/${repo}/languages`, {
       headers: getGitHubHeaders()
     });
     
     if (!response.ok) {
-        // 403 -> rate limit or permission denied. Propaga mensagem para o chamador
-        if (response.status === 403) {
-          throw new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações ou aguarde.');
-        }
-        return {};
+      // 403 -> rate limit or permission denied. Propaga mensagem para o chamador e anexa info
+      const info = getRateLimitInfo(response);
+      if (response.status === 403) {
+        const err = new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações ou aguarde.');
+        err.rateLimitInfo = info;
+        throw err;
+      }
+      return {};
     }
     
     const data = await response.json();
+    // Guarde também o remaining no console para debugging
+    const info = getRateLimitInfo(response);
+    if (info && info.remaining !== null) {
+      console.log(`[GitHub] X-RateLimit-Remaining: ${info.remaining}`);
+    }
     
     // Retorna o objeto completo com bytes por linguagem
     return data;
@@ -223,7 +268,7 @@ export async function fetchGitHubReadme(owner, repo) {
     console.log(`[GitHub] Buscando README de ${owner}/${repo}...`);
     
     // A API do GitHub tem um endpoint específico para README
-    const response = await fetch(
+    const response = await retryableFetch(
       `https://api.github.com/repos/${owner}/${repo}/readme`,
       {
         headers: {
@@ -236,9 +281,12 @@ export async function fetchGitHubReadme(owner, repo) {
     if (!response.ok) {
         // README não encontrado ou erro
       console.warn(`[GitHub] README não encontrado para ${owner}/${repo} - Status: ${response.status}`);
-        if (response.status === 403) {
-          throw new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações ou aguarde.');
-        }
+      const info = getRateLimitInfo(response);
+      if (response.status === 403) {
+        const err = new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações ou aguarde.');
+        err.rateLimitInfo = info;
+        throw err;
+      }
       return '';
     }
 
@@ -297,7 +345,7 @@ export async function fetchUserRepositories(username) {
 
     // Busca paginada (até 100 repos por página)
     while (hasMore) {
-      const response = await fetch(
+      const response = await retryableFetch(
         `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&sort=updated`,
         {
           headers: getGitHubHeaders()
@@ -305,11 +353,16 @@ export async function fetchUserRepositories(username) {
       );
 
       if (!response.ok) {
+        const rl = getRateLimitInfo(response);
         if (response.status === 401) {
-          throw new Error('❌ Token do GitHub inválido ou expirado. Configure um novo token nas configurações (⚙️).');
+          const err = new Error('❌ Token do GitHub inválido ou expirado. Configure um novo token nas configurações (⚙️).');
+          err.rateLimitInfo = rl;
+          throw err;
         }
         if (response.status === 403) {
-          throw new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações (⚙️) para aumentar o limite.');
+          const err = new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações (⚙️) para aumentar o limite.');
+          err.rateLimitInfo = rl;
+          throw err;
         }
         if (response.status === 404) {
           throw new Error(`❌ Usuário "${username}" não encontrado no GitHub.`);

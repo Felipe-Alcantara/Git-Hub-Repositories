@@ -877,6 +877,7 @@ export default function Home() {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         onImport={handleSaveProject}
+        onOpenToken={() => setIsTokenModalOpen(true)}
       />
 
       {/* Modal de Token do GitHub */}
