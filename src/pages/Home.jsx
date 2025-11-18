@@ -33,6 +33,7 @@ export default function Home() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTags, setFilterTags] = useState([]); // Novo filtro de tags
   const [filterOwners, setFilterOwners] = useState([]); // Novo filtro de autores/criadores
+  const [filterReadme, setFilterReadme] = useState('all'); // all | with | without
   const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity, custom
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
@@ -174,6 +175,15 @@ export default function Home() {
       );
     }
 
+    // Filtro de README
+    if (filterReadme !== 'all') {
+      if (filterReadme === 'with') {
+        filtered = filtered.filter(p => Boolean(p.details?.readme && p.details?.readme.trim().length > 0));
+      } else if (filterReadme === 'without') {
+        filtered = filtered.filter(p => !Boolean(p.details?.readme && p.details?.readme.trim().length > 0));
+      }
+    }
+
     // Ordenação
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -208,7 +218,7 @@ export default function Home() {
     });
 
     return filtered;
-  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, filterOwners, sortBy, customOrder]);
+  }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, filterOwners, filterReadme, sortBy, customOrder]);
 
   const toggleTagFilter = (tag) => {
     setFilterTags(prev => 
@@ -651,6 +661,20 @@ export default function Home() {
                     <option value="all">Todos</option>
                     <option value="in-progress">Em andamento</option>
                     <option value="completed">Finalizados</option>
+                  </select>
+                </div>
+
+                {/* Filtrar por README */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm text-gray-400 mb-2">README</label>
+                  <select
+                    value={filterReadme}
+                    onChange={(e) => setFilterReadme(e.target.value)}
+                    className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="with">Com README</option>
+                    <option value="without">Sem README</option>
                   </select>
                 </div>
 
