@@ -285,6 +285,10 @@ function TreeNode({
               onCancelRename={onCancelRename}
               onStartRename={onStartRename}
               onOpenFile={onOpenFile}
+              selectable={selectable}
+              selectedSet={selectedSet}
+              onSelectChange={onSelectChange}
+              readOnly={readOnly}
             />
           ))}
         </div>
