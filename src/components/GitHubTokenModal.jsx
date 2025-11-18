@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Key, ExternalLink, AlertCircle, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
+import ModalShell from './ModalShell';
 import { getGitHubToken, setGitHubToken } from '../utils/github';
 import { loadGeminiApiKey, saveGeminiApiKey, verifyGeminiApiKey } from '../utils/gemini';
 
@@ -10,22 +11,6 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [verifyingGemini, setVerifyingGemini] = useState(false);
   const [geminiVerified, setGeminiVerified] = useState(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [shouldAnimate, setShouldAnimate] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsVisible(true);
-      // Pequeno delay para garantir que o componente seja renderizado antes da animação
-      const timer = setTimeout(() => setShouldAnimate(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setShouldAnimate(false);
-      // Delay para permitir animação de saída antes de remover do DOM
-      const timer = setTimeout(() => setIsVisible(false), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -72,15 +57,9 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
     }
   };
 
-  if (!isVisible) return null;
-
   return (
-    <div className={`fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4 transition-all duration-500 ease-out ${
-      shouldAnimate ? 'opacity-100' : 'opacity-0'
-    }`}>
-      <div className={`bg-dark-surface border border-dark-border rounded-lg w-full max-w-[96vw] max-h-[95vh] overflow-y-auto transform transition-all duration-500 ease-out ${
-        shouldAnimate ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-8'
-      }`}>
+    <ModalShell isOpen={isOpen} onClose={onClose}>
+      <div className={`bg-dark-surface border border-dark-border rounded-lg w-full max-w-[96vw] max-h-[95vh] overflow-y-auto`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-dark-border">
           <div className="flex items-center gap-3">
@@ -318,7 +297,7 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </ModalShell>
   );
 }

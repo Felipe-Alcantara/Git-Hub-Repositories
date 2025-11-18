@@ -27,8 +27,12 @@ export default function ModalShell({ isOpen, onClose, children, overlayClassName
       onClick={onClose}
       className={`fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4 transition-all duration-500 ease-out ${shouldAnimate ? 'opacity-100' : 'opacity-0'} ${overlayClassName}`}
     >
-      <div onClick={stop} className={`w-full flex items-center justify-center transform transition-all duration-500 ease-out ${shouldAnimate ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-8'} ${containerClassName}`}>
-        {children}
+      {/* Center wrapper allows clicks to pass through (pointer-events-none), so overlay receives them
+          and closes the modal even on the sides; animation applied to the inner content instead. */}
+      <div className={`w-full flex items-center justify-center pointer-events-none`}> 
+        <div onClick={stop} className={`pointer-events-auto transform transition-all duration-500 ease-out ${shouldAnimate ? 'scale-100 opacity-100 translate-y-0' : 'scale-90 opacity-0 translate-y-8'} ${containerClassName}`}>
+          {children}
+        </div>
       </div>
     </div>
   );
