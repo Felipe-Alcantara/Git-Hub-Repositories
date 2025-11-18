@@ -13,6 +13,7 @@ import ImportProfileModal from '../components/ImportProfileModal';
 import GitHubTokenModal from '../components/GitHubTokenModal';
 import GistSyncModal from '../components/GistSyncModal';
 import { getAllTags } from '../utils/tags';
+import { saveProjects } from '../utils/storage';
 import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
 export default function Home() {
@@ -268,10 +269,9 @@ export default function Home() {
   };
 
   const handleBulkImport = (importedProjects) => {
-    // Limpar projetos existentes e importar os novos
-    // Como useProjects não expõe uma função de substituir todos,
-    // vamos precisar limpar o localStorage diretamente
-    localStorage.setItem('github-projects', JSON.stringify(importedProjects));
+    // Substituir todo o conjunto de projetos com os importados
+    // usar a função utilitária saveProjects para garantir a mesma chave
+    saveProjects(importedProjects);
     // Recarregar a página para atualizar o estado
     window.location.reload();
   };

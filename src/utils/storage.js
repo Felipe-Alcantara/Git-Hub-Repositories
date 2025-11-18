@@ -42,6 +42,18 @@ export const createEmptyProject = () => ({
 // Obter todos os projetos
 export const getProjects = () => {
   try {
+    // Backward compatibility: migra chave antiga 'github-projects' para a chave nova
+    try {
+      const old = localStorage.getItem('github-projects');
+      const current = localStorage.getItem(STORAGE_KEY);
+      if (old && !current) {
+        localStorage.setItem(STORAGE_KEY, old);
+        localStorage.removeItem('github-projects');
+        console.log('[storage] Migrei dados de `github-projects` para `github_projects_dashboard`');
+      }
+    } catch (e) {
+      // ignore migration failure
+    }
     const data = localStorage.getItem(STORAGE_KEY);
     const projects = data ? JSON.parse(data) : [];
     
