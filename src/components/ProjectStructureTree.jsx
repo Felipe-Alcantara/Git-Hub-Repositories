@@ -493,13 +493,28 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
 
       // GitHub retorna base64, geralmente UTF-8; decodificação simples
       const decoded = atob(data.content.replace(/\n/g, ''));
+      let finalContent = decoded;
       try {
         // mantém caracteres UTF-8 corretamente
-        const uri = decodeURIComponent(escape(decoded));
-        setFileContent(uri);
+        finalContent = decodeURIComponent(escape(decoded));
       } catch (e) {
-        setFileContent(decoded);
+        // fallback: usar decoded simples
       }
+      setFileContent(finalContent);
+
+      // Atualiza o nó na árvore com o conteúdo do arquivo para que outras partes da app (IA) possam usar
+      const updateNodeContent = (nodes) => {
+        return nodes.map(n => {
+              if (n.id === node.id) return { ...n, content: finalContent };
+          if (n.children) return { ...n, children: updateNodeContent(n.children) };
+          return n;
+        });
+      };
+
+      const updatedTree = updateNodeContent(tree);
+      setTree(sortTree(updatedTree));
+      // chama onSave para persistir na estrutura do projeto
+      onSave?.(sortTree(updatedTree));
 
       setFileModalOpen(true);
       setFileLoading(false);

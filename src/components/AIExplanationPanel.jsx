@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Loader2, Send, MessageCircle, Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { explainProjectWithGemini, loadGeminiApiKey, askGeminiQuestion } from '../utils/gemini';
+import { explainProjectWithGemini, loadGeminiApiKey, askGeminiQuestion, flattenStructure, collectFilesPreview } from '../utils/gemini';
+import { parseGitHubUrl, fetchGitHubFileContent } from '../utils/github';
+import { updateProject } from '../utils/storage';
 
 export default function AIExplanationPanel({ visible, onClose, project, activeSection }) {
   const [messages, setMessages] = useState(() => {
@@ -60,6 +62,60 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
       setMessages(prev => [...prev, newMessage]);
     } catch (err) {
       setError(err.message || 'Erro ao gerar explicação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Busca arquivos da estrutura (do GitHub) e adiciona conteúdo à estrutura do projeto
+  const loadFilesForAI = async () => {
+    setError('');
+    const parsed = parseGitHubUrl(project?.repoUrl || project?.webUrl || '');
+    if (!parsed) {
+      setError('URL do repositório não configurada ou inválida. Abra a aba Estrutura e configure o repositório.');
+      return;
+    }
+
+    // Flatten structure e priorizar alguns arquivos
+    const files = flattenStructure(project?.details?.structure || []);
+    if (!files || files.length === 0) {
+      setError('Estrutura do projeto vazia. Carregue a estrutura no painel antes de tentar baixar arquivos.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Escolhe até 12 arquivos prioritários
+      const toFetch = files.slice(0, 12);
+      const fetched = await Promise.allSettled(toFetch.map(f => fetchGitHubFileContent(parsed.owner, parsed.repo, f.path)));
+
+      // Atualiza a estrutura local com conteúdo lido
+      const newStructure = JSON.parse(JSON.stringify(project.details.structure || []));
+
+      const insertContent = (nodes) => {
+        return nodes.map(n => {
+          if (n.type === 'file') {
+            const path = n.id; // o ID armazena caminho pelo ProjectStructureTree
+            const idx = toFetch.findIndex(tf => tf.path === path || tf.name === n.name);
+            if (idx !== -1 && fetched[idx]?.status === 'fulfilled') {
+              n.content = fetched[idx].value || '';
+            }
+            return n;
+          }
+          if (n.children) return { ...n, children: insertContent(n.children) };
+          return n;
+        });
+      };
+
+      const updatedStructure = insertContent(newStructure);
+
+      // Salva em localStorage para persistência e também atualizar contexto
+      updateProject(project.id, { details: { ...project.details, structure: updatedStructure } });
+
+      // Mensagem para o chat
+      setMessages(prev => [...prev, { id: Date.now(), type: 'ai', content: `✅ ${toFetch.length} arquivos carregados para análise pela IA.` }]);
+    } catch (err) {
+      setError(err.message || 'Erro ao buscar arquivos');
     } finally {
       setLoading(false);
     }
@@ -291,13 +347,24 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
             rows={2}
             disabled={loading}
           />
-          <button
-            onClick={sendQuestion}
-            disabled={loading || !currentQuestion.trim()}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={loadFilesForAI}
+              disabled={loading}
+              className="px-3 py-1 bg-dark-surface border border-dark-border text-xs rounded hover:border-blue-500 transition-colors"
+              title="Carregar arquivos do repositório para uso da IA"
+            >
+              Enviar contexto
+            </button>
+            <button
+              onClick={sendQuestion}
+              disabled={loading || !currentQuestion.trim()}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              <Send className="w-4 h-4" />
+              Enviar Mensagem
+            </button>
+          </div>
         </div>
         <div className="text-xs text-gray-500 mt-2">
           Pressione Enter para enviar, Shift+Enter para nova linha

@@ -245,6 +245,39 @@ export async function fetchGitHubReadme(owner, repo) {
 }
 
 /**
+ * Busca o conteúdo de um arquivo específico do repositório via API contents
+ * @param {string} owner
+ * @param {string} repo
+ * @param {string} path
+ * @param {string} branch
+ * @returns {Promise<string>} conteúdo do arquivo ou string vazia
+ */
+export async function fetchGitHubFileContent(owner, repo, path, branch = 'HEAD') {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`, {
+      headers: getGitHubHeaders()
+    });
+
+    if (!res.ok) {
+      console.warn(`[GitHub] Arquivo não encontrado: ${owner}/${repo}/${path} - Status: ${res.status}`);
+      return '';
+    }
+
+    const data = await res.json();
+    if (!data.content) return '';
+    const decoded = atob(data.content.replace(/\n/g, ''));
+    try {
+      return decodeURIComponent(escape(decoded));
+    } catch (e) {
+      return decoded;
+    }
+  } catch (error) {
+    console.error('[GitHub] Erro ao buscar arquivo do repo:', error);
+    return '';
+  }
+}
+
+/**
  * Busca todos os repositórios públicos de um usuário do GitHub
  * @param {string} username - Nome de usuário do GitHub
  * @returns {Promise<Array>} - Lista de repositórios

@@ -24,6 +24,58 @@ export function loadGeminiApiKey() {
   return localStorage.getItem(GEMINI_API_KEY_STORAGE);
 }
 
+// Auxiliar: percorre a estrutura de arquivos (salva em project.details.structure) e retorna prioridade de arquivos
+export function flattenStructure(structure, parentPath = '') {
+  if (!Array.isArray(structure)) return [];
+  const files = [];
+
+  for (const node of structure) {
+    const path = parentPath ? `${parentPath}/${node.name}` : node.name;
+    if (node.type === 'file') {
+      files.push({ path, name: node.name, content: node.content || '' });
+    } else if (node.type === 'folder') {
+      files.push(...flattenStructure(node.children || [], path));
+    }
+  }
+
+  return files;
+}
+
+// Coleta prévias de arquivos para incluir no prompt. Limita o tamanho total para evitar exceder tokens
+export function collectFilesPreview(project, maxTotalChars = 6000, perFileChars = 1200) {
+  const structure = project?.details?.structure;
+  if (!structure) return [];
+
+  const files = flattenStructure(structure);
+
+  // Priorizar README, package.json, index.html e arquivos JS/TS
+  const preferredOrder = ['README.md', 'README.txt', 'package.json', 'index.html', 'index.js', 'App.jsx'];
+
+  const preferred = [];
+  const others = [];
+
+  for (const f of files) {
+    if (preferredOrder.includes(f.name)) preferred.push(f);
+    else others.push(f);
+  }
+
+  const ordered = [...preferred, ...others];
+
+  const result = [];
+  let total = 0;
+
+  for (const f of ordered) {
+    if (total >= maxTotalChars) break;
+    const trimmed = (f.content || '').substring(0, perFileChars);
+    if (!trimmed) continue;
+    const preview = trimmed.length === perFileChars ? `${trimmed} ... (truncated)` : trimmed;
+    result.push({ path: f.path, preview });
+    total += preview.length;
+  }
+
+  return result;
+}
+
 /**
  * Obter o modelo Gemini disponível para uso
  * @param {string} apiKey - API key do Gemini
@@ -123,6 +175,9 @@ Analise o seguinte projeto e forneça uma explicação clara, objetiva e bem est
 
 **📖 CONTEÚDO DO README**
 ${readme.substring(0, 5000)} ${readme.length > 5000 ? '...(conteúdo truncado)' : ''}
+
+**📁 AMOSTRA DE ARQUIVOS DO PROJETO**
+${collectFilesPreview(project).map(f => `- ${f.path}: ${f.preview}`).join('\n')}
 
 **🔍 ANÁLISE ESTRUTURADA**
 
@@ -285,6 +340,9 @@ export async function askGeminiQuestion(project, question, conversationHistory, 
 **README (resumido):**
 ${readme.substring(0, 3000)}${readme.length > 3000 ? '...' : ''}
 
+**📁 AMOSTRA DE ARQUIVOS DO PROJETO**
+${collectFilesPreview(project).map(f => `- ${f.path}: ${f.preview}`).join('\n')}
+
 ${sectionContext}${conversationContext}
 
 **PERGUNTA DO USUÁRIO:**
@@ -381,7 +439,8 @@ Responda à pergunta acima:`;
  * @param {object} options - Opções da requisição
  * @param {number} maxRetries - Número máximo de tentativas
  * @returns {Promise<Response>} - Resposta da requisição
- */
+*/
+ 
 async function fetchWithRetry(url, options, maxRetries = 3) {
   let lastError;
 
