@@ -121,7 +121,7 @@ function TreeNode({
         {...attributes}
         {...listeners}
         onDoubleClick={() => {
-          if (!isFolder && typeof onOpenFile === 'function') onOpenFile(node);
+          if (!isFolder && typeof onOpenFile === 'function') onOpenFile(node, true);
         }}
       >
         {/* Ícone de expandir/colapsar (só para pastas) */}
@@ -243,10 +243,10 @@ function TreeNode({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    typeof onOpenFile === 'function' && onOpenFile(node);
+                    typeof onOpenFile === 'function' && onOpenFile(node, true);
                   }}
                   className="p-1 hover:bg-dark-border rounded transition-colors"
-                  title="Abrir arquivo"
+                  title="Abrir em modo edição"
                 >
                   <FileText className="w-3 h-3 text-gray-400" />
                 </button>
@@ -353,6 +353,7 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState(null);
   const [fileContent, setFileContent] = useState('');
+  const [isEditingFile, setIsEditingFile] = useState(true);
   const [currentFile, setCurrentFile] = useState(null);
 
   const sensors = useSensors(
@@ -463,7 +464,7 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
   };
 
   // Ler conteúdo do arquivo do GitHub (via endpoint contents)
-  const fetchFileContent = async (node) => {
+  const fetchFileContent = async (node, openInEditMode = true) => {
     if (!repo || !repo.owner || !repo.name) {
       setFileError('Repositório não configurado');
       setFileModalOpen(true);
@@ -501,6 +502,8 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
         // fallback: usar decoded simples
       }
       setFileContent(finalContent);
+      // define se abre em modo edição ou somente visualização
+      setIsEditingFile(Boolean(openInEditMode));
 
       // Atualiza o nó na árvore com o conteúdo do arquivo para que outras partes da app (IA) possam usar
       const updateNodeContent = (nodes) => {
@@ -934,6 +937,14 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
                 <div className="text-sm text-white">{currentFile?.name || 'Arquivo'}</div>
                 <div className="text-xs text-gray-400">{currentFile?.id}</div>
               </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsEditingFile(prev => !prev)}
+                  className="px-2 py-1 bg-dark-border rounded text-xs text-white hover:bg-gray-700"
+                >
+                  {isEditingFile ? 'Visualizar' : 'Editar'}
+                </button>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -950,14 +961,59 @@ export default function ProjectStructureTree({ initialData, onSave, selectable =
             </div>
           </div>
 
-          <div className="p-4 overflow-auto flex-1">
+              <div className="p-4 overflow-auto flex-1">
             {fileLoading ? (
               <div className="text-gray-400 text-sm">Carregando...</div>
             ) : fileError ? (
               <div className="text-red-400 text-sm">Erro: {fileError}</div>
             ) : (
-              <pre className="text-xs text-white whitespace-pre-wrap">{fileContent}</pre>
+                  <div>
+                    {/* Se estiver em modo de edição, exibe textarea editável */}
+                    {isEditingFile ? (
+                      <textarea
+                        className="w-full h-[60vh] bg-dark-bg border border-dark-border rounded px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none"
+                        value={fileContent}
+                        onChange={(e) => setFileContent(e.target.value)}
+                      />
+                    ) : (
+                      <pre className="text-xs text-white whitespace-pre-wrap">{fileContent}</pre>
+                    )}
+                  </div>
             )}
+          </div>
+
+          {/* Ações do modal (Salvar / Copiar / Fechar) */}
+          <div className="p-3 border-t border-dark-border flex items-center justify-end gap-2">
+            {isEditingFile && (
+              <button
+                onClick={() => {
+                  // Salva conteúdo no nó e na árvore
+                  const updateNodeContent = (nodes) => {
+                    return nodes.map(n => {
+                      if (n.id === currentFile.id) return { ...n, content: fileContent };
+                      if (n.children) return { ...n, children: updateNodeContent(n.children) };
+                      return n;
+                    });
+                  };
+
+                  const updatedTree = updateNodeContent(tree);
+                  setTree(sortTree(updatedTree));
+                  onSave?.(sortTree(updatedTree));
+                }}
+                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-white text-sm"
+              >
+                Salvar
+              </button>
+            )}
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(fileContent || '');
+              }}
+              className="px-3 py-1 bg-dark-border rounded text-white text-sm"
+            >
+              Copiar
+            </button>
+            <button onClick={() => setFileModalOpen(false)} className="px-3 py-1 bg-red-700 hover:bg-red-800 rounded text-white text-sm">Fechar</button>
           </div>
         </div>
       </ModalShell>

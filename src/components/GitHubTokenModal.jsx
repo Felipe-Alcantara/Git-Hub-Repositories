@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Key, ExternalLink, AlertCircle, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
 import ModalShell from './ModalShell';
 import { getGitHubToken, setGitHubToken } from '../utils/github';
+import { getAllowDuplicates, setAllowDuplicates } from '../utils/storage';
 import { loadGeminiApiKey, saveGeminiApiKey, verifyGeminiApiKey } from '../utils/gemini';
 
 export default function GitHubTokenModal({ isOpen, onClose }) {
@@ -11,6 +12,7 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [verifyingGemini, setVerifyingGemini] = useState(false);
   const [geminiVerified, setGeminiVerified] = useState(null);
+  const [allowDuplicates, setAllowDuplicatesState] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -18,12 +20,14 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
       const currentGeminiKey = loadGeminiApiKey();
       setToken(currentToken || '');
       setGeminiKey(currentGeminiKey || '');
+      setAllowDuplicatesState(getAllowDuplicates());
     }
   }, [isOpen]);
 
   const handleSave = () => {
     setGitHubToken(token.trim());
     saveGeminiApiKey(geminiKey.trim());
+    setAllowDuplicates(Boolean(allowDuplicates));
     onClose();
   };
 
@@ -79,6 +83,27 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
 
         {/* Content */}
         <div className="p-6">
+          {/* Seção de importação */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-5 h-5 bg-blue-500/10 rounded flex items-center justify-center text-blue-400">i</div>
+              <h3 className="text-lg font-semibold text-white">Importação</h3>
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={allowDuplicates}
+                  onChange={(e) => setAllowDuplicatesState(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-300">Permitir duplicatas ao importar</span>
+              </label>
+              <p className="text-xs text-gray-500">Por padrão o app evita duplicatas. Marque para permitir que uma importação adicione registros iguais.</p>
+            </div>
+          </div>
+
           {/* Grid responsivo: 1 coluna em mobile, 2 colunas em md+ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Seção GitHub Token */}

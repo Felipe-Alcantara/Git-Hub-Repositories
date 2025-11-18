@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'github_projects_dashboard';
 const CUSTOM_ORDER_KEY = 'github_projects_custom_order';
 const CUSTOM_GROUPS_KEY = 'github_projects_custom_groups';
+const ALLOW_DUPLICATES_KEY = 'github_projects_allow_duplicates';
 
 // Estrutura de um projeto
 export const createEmptyProject = () => ({
@@ -174,14 +175,25 @@ export const importProjects = (file) => {
           id: crypto.randomUUID(),
           lastModified: new Date().toISOString(),
         }));
-        
-        const mergedProjects = [...currentProjects, ...processedProjects];
+
+        // Evita importar duplicatas: compara por repoUrl / webUrl / nome (caso repoUrl vazio)
+        const existingKeys = new Set(currentProjects.map(p => ((p.repoUrl || p.webUrl || p.name) || '').toString().trim().toLowerCase()));
+
+        // Se estiver habilitado permitir duplicatas, tudo é importado sem filtragem
+        const allowDuplicates = localStorage.getItem(ALLOW_DUPLICATES_KEY) === 'true';
+        const filteredToAdd = allowDuplicates ? processedProjects : processedProjects.filter(p => {
+          const key = ((p.repoUrl || p.webUrl || p.name) || '').toString().trim().toLowerCase();
+          if (!key) return true; // projetos sem chave serão adicionados
+          return !existingKeys.has(key);
+        });
+
+        const mergedProjects = [...currentProjects, ...filteredToAdd];
         saveProjects(mergedProjects);
         
         resolve({
           success: true,
-          imported: processedProjects.length,
-          projects: processedProjects,
+          imported: filteredToAdd.length,
+          projects: filteredToAdd,
         });
       } catch (error) {
         reject(error);
@@ -191,6 +203,26 @@ export const importProjects = (file) => {
     reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
     reader.readAsText(file);
   });
+};
+
+// Permitir duplicatas ao importar (config)
+export const getAllowDuplicates = () => {
+  try {
+    const v = localStorage.getItem(ALLOW_DUPLICATES_KEY);
+    return v === 'true';
+  } catch (e) {
+    return false;
+  }
+};
+
+export const setAllowDuplicates = (value) => {
+  try {
+    localStorage.setItem(ALLOW_DUPLICATES_KEY, value ? 'true' : 'false');
+    return true;
+  } catch (e) {
+    console.error('Erro ao salvar configuração de duplicatas:', e);
+    return false;
+  }
 };
 
 // Limpar todos os dados (útil para testes)
