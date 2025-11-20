@@ -7,7 +7,7 @@ import ModalShell from './ModalShell';
 import { parseGitHubUrl, fetchGitHubFileContent, getGitHubToken } from '../utils/github';
 import { updateProject } from '../utils/storage';
 
-export default function AIExplanationPanel({ visible, onClose, project, activeSection }) {
+export default function AIExplanationPanel({ visible, onClose, project, activeSection, generateSectionRequest, onGenerateHandled }) {
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(`aiChat_${project?.id}`);
     return saved ? JSON.parse(saved) : [];
@@ -94,6 +94,57 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
       setLoading(false);
     }
   };
+
+  // Gera conteúdo para uma aba específica quando parent solicitar
+  useEffect(() => {
+    if (!generateSectionRequest) return;
+
+    // Só processar se a aba solicitada for a mesma que está ativa no painel
+    if (generateSectionRequest !== activeSection) {
+      // Delega ao usuário — definimos a aba ativa no ProjectPage, então apenas aguarde.
+      return;
+    }
+
+    const generateForSection = async () => {
+      const apiKey = loadGeminiApiKey();
+      if (!apiKey) {
+        setError('⚙️ Configure a API Key do Google Gemini nas configurações primeiro.');
+        if (onGenerateHandled) onGenerateHandled();
+        return;
+      }
+
+      // Mapeia prompts por aba
+      const prompts = {
+        readme: 'Analise o README e gere um resumo técnico conciso, indicando pontos fortes e pontos a melhorar. Seja bem detalhado, específico, motivador e criativo.',
+        ideas: 'Liste 8-12 ideias práticas de features e melhorias para este projeto. Para cada ideia, adicione uma descrição e um possível impacto. Seja bem detalhado, específico, motivador e criativo',
+        improvements: 'Liste melhorias técnicas e de UX para este projeto. Explique cada item com prioridade (Alta/Média/Baixa) e justificativa. Seja bem detalhado, específico, motivador e criativo',
+        problems: 'Identifique problemas ou potenciais bugs no projeto baseado no README e na estrutura (se disponível). Para cada problema, proponha uma solução ou medida mitigadora. Seja bem detalhado, específico, motivador e criativo',
+        purpose: 'Baseado no projeto, redefina o propósito e objetivos claros para uma apresentação para estudantes e stakeholders. Inclua missão, visão e metas principais. Seja bem detalhado, específico, motivador e criativo',
+        users: 'Sugira personas e casos de uso para o projeto. Descreva 3-4 perfis de usuário com suas principais necessidades. E diga como ele pode ser útil para cada tipo de usuário. Seja bem detalhado, específico, motivador e criativo',
+        mvp: 'Liste um MVP prático e mínimo com passos para implementação, incluindo funcionalidades essenciais e tempo estimado por feature. Pode incluir sugestões de ferramentas e tecnologias. Seja bem detalhado, específico, motivador e criativo',
+        stack: 'Sugira melhorias e alternativas para a stack técnica atual, com prós/cons para cada opção. Dê ideias para otimização de performance, segurança e escalabilidade. Seja bem detalhado, específico, motivador e criativo',
+        upgrades: 'Proponha próximos updates, atualizações, roadmap de versões, com prioridades e entregáveis. Seja bem detalhado, específico, motivador e criativo',
+        structure: 'Analise a estrutura do projeto e sugira reorganizações, arquivos para adicionar e boas práticas para arquitetura de diretórios. Analise também o conteúdo dos arquivos, se disponível explicando o propósito de cada um. Seja bem detalhado, específico, motivador e criativo',
+        sketches: 'Sugira diagramas e esboços úteis para documentar o projeto; descreva cada diagrama e o objetivo. Pode usar ASCII art para ilustrar exemplos simples. Seja bem detalhado, específico, motivador e criativo'
+      };
+
+      const question = prompts[generateSectionRequest] || `Gere conteúdo para a aba ${generateSectionRequest}`;
+
+      setLoading(true);
+      try {
+        const result = await askGeminiQuestion(project, question, messages, apiKey, generateSectionRequest);
+        const aiMsg = { id: Date.now(), type: 'ai', content: result, timestamp: new Date().toISOString() };
+        setMessages(prev => [...prev, aiMsg]);
+      } catch (err) {
+        setError(err.message || 'Erro ao gerar conteúdo por IA');
+      } finally {
+        setLoading(false);
+        if (onGenerateHandled) onGenerateHandled();
+      }
+    };
+
+    generateForSection();
+  }, [generateSectionRequest, activeSection]);
 
   // Busca arquivos da estrutura (do GitHub) e adiciona conteúdo à estrutura do projeto
   const loadFilesForAI = async () => {

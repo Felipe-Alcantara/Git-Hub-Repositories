@@ -55,6 +55,7 @@ export default function ProjectPage() {
     return saved ? parseInt(saved, 10) : 420;
   });
   const [isResizingRight, setIsResizingRight] = useState(false);
+  const [aiGenerateRequest, setAiGenerateRequest] = useState(null);
 
   useEffect(() => {
     const loadedProject = getProjectById(id);
@@ -791,6 +792,20 @@ export default function ProjectPage() {
                               </>
                             )}
                           </button>
+                          {/* Botão Gerar por IA: chama o painel de IA e solicita geração para a aba atual */}
+                          <button
+                            onClick={() => {
+                              // Garante que a aba esteja ativa
+                              setActiveSection(section.key);
+                              setShowAIModal(true);
+                              setAiGenerateRequest(section.key);
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-colors"
+                            title={`Gerar conteúdo por IA para a aba ${section.label}`}
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            <span className="text-sm">Gerar por IA</span>
+                          </button>
                         </div>
                       </div>
                       
@@ -864,6 +879,8 @@ export default function ProjectPage() {
               onClose={() => setShowAIModal(false)}
               project={editedProject || project}
               activeSection={activeSection}
+              generateSectionRequest={aiGenerateRequest}
+              onGenerateHandled={() => setAiGenerateRequest(null)}
             />
           </aside>
         )}
