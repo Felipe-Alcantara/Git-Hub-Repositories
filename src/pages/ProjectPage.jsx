@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles, Copy, Check } from 'lucide-react';
 import { getProjectById, updateProject } from '../utils/storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,6 +55,7 @@ export default function ProjectPage() {
     return saved ? parseInt(saved, 10) : 420;
   });
   const [isResizingRight, setIsResizingRight] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
   const [aiGenerateRequest, setAiGenerateRequest] = useState(null);
 
   useEffect(() => {
@@ -173,6 +174,27 @@ export default function ProjectPage() {
   useEffect(() => {
     localStorage.setItem('projectPageRightWidth', rightSidebarWidth.toString());
   }, [rightSidebarWidth]);
+
+  const copyCodeSimple = async (text, id) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text || '');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text || '';
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedCodeId(id);
+      setTimeout(() => setCopiedCodeId(null), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar código:', err);
+    }
+  };
 
   // Salva o estado do painel AI
   useEffect(() => {
@@ -844,11 +866,26 @@ export default function ProjectPage() {
 
                                     return (
                                       <div className="relative my-3">
-                                        {prettyLang && (
-                                          <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300">
-                                            {prettyLang}
-                                          </div>
-                                        )}
+                                        {prettyLang && (() => {
+                                              const codeText = Array.isArray(children) ? children.join('') : String(children);
+                                              const codeId = `preview-${codeText.slice(0,40)}`;
+                                              return (
+                                                <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300 flex items-center gap-2">
+                                                  <span>{prettyLang}</span>
+                                                  <button
+                                                    onClick={() => copyCodeSimple(codeText, codeId)}
+                                                    className="p-1 rounded hover:bg-dark-border"
+                                                    title="Copiar código"
+                                                  >
+                                                    {copiedCodeId === codeId ? (
+                                                      <Check className="w-3 h-3 text-green-400" />
+                                                    ) : (
+                                                      <Copy className="w-3 h-3 text-gray-300" />
+                                                    )}
+                                                  </button>
+                                                </div>
+                                              );
+                                            })()}
                                         <pre className="block bg-dark-surface text-gray-300 p-3 rounded border border-dark-border overflow-x-auto font-mono text-sm">
                                           <code className={className} {...props}>{children}</code>
                                         </pre>

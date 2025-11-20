@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import ModalShell from './ModalShell';
-import { X, Sparkles, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import { X, Sparkles, Loader2, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
 import { explainProjectWithGemini, loadGeminiApiKey } from '../utils/gemini';
 import ReactMarkdown from 'react-markdown';
 
 export default function AIExplanationModal({ isOpen, onClose, project }) {
   const [explanation, setExplanation] = useState('');
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,6 +44,27 @@ export default function AIExplanationModal({ isOpen, onClose, project }) {
       handleExplain();
     }
   }, [isOpen]);
+
+  const copyCodeSimple = async (text, id) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text || '');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text || '';
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedCodeId(id);
+      setTimeout(() => setCopiedCodeId(null), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar código:', err);
+    }
+  };
 
   return (
     <ModalShell isOpen={isOpen} onClose={handleClose}>
@@ -124,11 +146,26 @@ export default function AIExplanationModal({ isOpen, onClose, project }) {
 
                     return (
                       <div className="relative my-3">
-                        {prettyLang && (
-                          <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300">
-                            {prettyLang}
-                          </div>
-                        )}
+                        {prettyLang && (() => {
+                          const codeText = Array.isArray(children) ? children.join('') : String(children);
+                          const codeId = `modal-${codeText.slice(0,40)}`;
+                          return (
+                            <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300 flex items-center gap-2">
+                              <span>{prettyLang}</span>
+                              <button
+                                onClick={() => copyCodeSimple(codeText, codeId)}
+                                className="p-1 rounded hover:bg-dark-border"
+                                title="Copiar código"
+                              >
+                                {copiedCodeId === codeId ? (
+                                  <Check className="w-3 h-3 text-green-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3 text-gray-300" />
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })()}
                         <pre className="mb-3 overflow-x-auto bg-dark-bg border border-dark-border rounded-lg p-3 text-sm font-mono">
                           <code className={className} {...props}>{children}</code>
                         </pre>

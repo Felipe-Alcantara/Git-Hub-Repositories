@@ -25,6 +25,7 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
   };
 
   const [copiedMessageId, setCopiedMessageId] = useState(null);
+  const [copiedCodeId, setCopiedCodeId] = useState(null);
 
   const copyToClipboard = async (text, id) => {
     try {
@@ -44,6 +45,27 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
       setTimeout(() => setCopiedMessageId(null), 2000);
     } catch (err) {
       console.error('Erro ao copiar:', err);
+    }
+  };
+
+  const copyCodeToClipboard = async (text, id) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text || '');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text || '';
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedCodeId(id);
+      setTimeout(() => setCopiedCodeId(null), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar código:', err);
     }
   };
 
@@ -403,11 +425,26 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
 
                           return (
                             <div className="relative my-3">
-                              {prettyLang && (
-                                <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300">
-                                  {prettyLang}
-                                </div>
-                              )}
+                              {prettyLang && (() => {
+                                    const codeText = Array.isArray(children) ? children.join('') : String(children);
+                                    const codeId = `${message.id}-${codeText.slice(0,40)}`;
+                                    return (
+                                      <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300 flex items-center gap-2">
+                                        <span>{prettyLang}</span>
+                                        <button
+                                          onClick={() => copyCodeToClipboard(codeText, codeId)}
+                                          className="p-1 rounded hover:bg-dark-border"
+                                          title="Copiar código"
+                                        >
+                                          {copiedCodeId === codeId ? (
+                                            <Check className="w-3 h-3 text-green-400" />
+                                          ) : (
+                                            <Copy className="w-3 h-3 text-gray-300" />
+                                          )}
+                                        </button>
+                                      </div>
+                                    );
+                                  })()}
                               <pre className="bg-dark-bg border border-dark-border rounded-lg p-3 overflow-x-auto text-sm font-mono">
                                 <code className={className} {...props}>
                                   {children}
