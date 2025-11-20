@@ -98,6 +98,14 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
   // Busca arquivos da estrutura (do GitHub) e adiciona conteúdo à estrutura do projeto
   const loadFilesForAI = async () => {
     setError('');
+    // Só permite enviar contexto quando estivermos na aba de Estrutura.
+    // Os arquivos dessa aba são carregados apenas quando o usuário abre a aba
+    // para economizar recursos. Avisamos o usuário para abrir a aba Estrutura
+    // antes de tentar enviar contexto.
+    if (activeSection !== 'structure') {
+      setError('⚠️ Só é possível enviar contexto quando você estiver na aba "Estrutura do Projeto".\n\nIsso ocorre porque os arquivos só são carregados quando você abre essa aba, para economizar recursos. Abra a aba Estrutura e tente novamente.');
+      return;
+    }
     const parsed = parseGitHubUrl(project?.repoUrl || project?.webUrl || '');
     if (!parsed) {
       setError('URL do repositório não configurada ou inválida. Abra a aba Estrutura e configure o repositório.');
@@ -410,7 +418,11 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
                 onClick={loadFilesForAI}
                 disabled={loading}
                 className="px-3 py-1 bg-dark-surface border border-dark-border text-xs rounded hover:border-blue-500 transition-colors"
-                title="Carregar arquivos do repositório para uso da IA"
+                title={
+                  activeSection === 'structure'
+                    ? 'Carregar arquivos do repositório para uso da IA'
+                    : 'Abra a aba Estrutura para enviar contexto — arquivos só são carregados quando a aba Estrutura é aberta (economia de recursos)'
+                }
               >
                 Enviar contexto
               </button>
