@@ -234,7 +234,7 @@ IMPORTANTE:
           ],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 4096, // Aumentado para reduzir truncamento em saídas grandes
             topP: 0.8,
             topK: 40,
           }
@@ -272,6 +272,33 @@ IMPORTANTE:
     
     if (!explanation) {
       throw new Error('Resposta vazia da API');
+    }
+
+    // Se parece estar truncada, tentar uma continuação simples
+    if (looksTruncated(explanation)) {
+      try {
+        const contPrompt = `${prompt}\n\nPor favor, continue a resposta anterior onde parou e conclua a frase/ideia. Mantenha o mesmo formato e a linguagem (Português).`;
+        const contResp = await fetchWithRetry(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: contPrompt }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 2048, topP: 0.8, topK: 40 }
+            })
+          },
+          1
+        );
+
+        if (contResp && contResp.ok) {
+          const contData = await contResp.json();
+          const contText = contData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (contText) return explanation + '\n\n' + contText;
+        }
+      } catch (err) {
+        console.warn('[Gemini] Falha ao pedir continuação, retornando texto parcial', err);
+      }
     }
 
     return explanation;
@@ -386,7 +413,7 @@ Responda à pergunta acima:`;
           ],
           generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 1536,
+            maxOutputTokens: 4096, // Aumentado para permitir respostas maiores
             topP: 0.8,
             topK: 40,
           }
@@ -426,11 +453,53 @@ Responda à pergunta acima:`;
       throw new Error('Resposta vazia da API');
     }
 
+    // Se estiver truncado, solicitar continuação (uma tentativa)
+    if (looksTruncated(answer)) {
+      try {
+        const contPrompt = `${prompt}\n\nPor favor, continue a resposta anterior onde parou e conclua a frase/ideia. Mantenha o mesmo formato e a linguagem (Português).`;
+        const contResp = await fetchWithRetry(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: contPrompt }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 2048, topP: 0.8, topK: 40 }
+            })
+          },
+          1
+        );
+
+        if (contResp && contResp.ok) {
+          const contData = await contResp.json();
+          const contText = contData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (contText) return answer + '\n\n' + contText;
+        }
+      } catch (err) {
+        console.warn('[Gemini] Falha ao pedir continuação, retornando texto parcial', err);
+      }
+    }
+
     return answer;
   } catch (error) {
     console.error('[Gemini] Erro ao fazer pergunta:', error);
     throw error;
   }
+}
+
+// Heurística simples para detectar possível truncamento de resposta.
+export function looksTruncated(text) {
+  if (!text) return false;
+  const trimmed = text.trim();
+
+  // Procurar marcadores explícitos
+  const markers = ['(truncated)', '...(conteúdo truncado)', '... (truncated)', '... (continua)'];
+  if (markers.some(m => trimmed.includes(m))) return true;
+
+  // Se terminar com reticências, pode estar incompleto
+  if (/\.\.\.$|\u2026$/.test(trimmed)) return true;
+
+  return false;
 }
 
 /**
