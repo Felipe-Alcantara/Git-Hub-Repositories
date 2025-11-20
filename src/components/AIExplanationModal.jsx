@@ -112,10 +112,29 @@ export default function AIExplanationModal({ isOpen, onClose, project }) {
                   ul: ({node, ...props}) => <ul className="list-disc list-inside text-gray-300 mb-3 space-y-1" {...props} />,
                   ol: ({node, ...props}) => <ol className="list-decimal list-inside text-gray-300 mb-3 space-y-1" {...props} />,
                   li: ({node, ...props}) => <li className="text-gray-300" {...props} />,
-                  code: ({node, inline, ...props}) => 
-                    inline 
-                      ? <code className="bg-dark-bg px-2 py-0.5 rounded text-purple-400 text-sm font-mono" {...props} />
-                      : <code className="block bg-dark-bg p-4 rounded text-sm font-mono text-gray-300 overflow-x-auto" {...props} />,
+                  code: ({ node, inline, className, children, ...props }) => {
+                    const langMatch = /language-(\w+)/.exec(className || '');
+                    const lang = langMatch ? langMatch[1] : null;
+                    const langMap = { js: 'JavaScript', jsx: 'JSX', ts: 'TypeScript', tsx: 'TSX', py: 'Python', json: 'JSON' };
+                    const prettyLang = lang ? (langMap[lang] || lang.toUpperCase()) : null;
+
+                    if (inline) {
+                      return <code className="bg-dark-bg px-2 py-0.5 rounded text-purple-400 text-sm font-mono" {...props} />;
+                    }
+
+                    return (
+                      <div className="relative my-3">
+                        {prettyLang && (
+                          <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300">
+                            {prettyLang}
+                          </div>
+                        )}
+                        <pre className="mb-3 overflow-x-auto bg-dark-bg border border-dark-border rounded-lg p-3 text-sm font-mono">
+                          <code className={className} {...props}>{children}</code>
+                        </pre>
+                      </div>
+                    );
+                  },
                   strong: ({node, ...props}) => <strong className="text-white font-semibold" {...props} />,
                   a: ({node, ...props}) => <a className="text-purple-400 hover:text-purple-300 underline" {...props} />,
                 }}

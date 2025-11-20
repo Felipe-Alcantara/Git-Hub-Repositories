@@ -350,7 +350,7 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
                     <div className="prose prose-invert max-w-none text-sm prose-headings:text-white prose-headings:font-semibold prose-headings:border-b prose-headings:border-gray-600 prose-headings:pb-1 prose-headings:mb-3 prose-p:text-gray-200 prose-p:leading-relaxed prose-ul:text-gray-200 prose-li:marker:text-purple-400 prose-strong:text-white prose-strong:font-medium prose-code:text-purple-300 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs">
                     <div>
                       <ReactMarkdown
-                      components={{
+                        components={{
                         h2: ({ children }) => (
                           <h2 className="text-base font-bold text-white mt-4 mb-2 first:mt-0 flex items-center gap-2">
                             {children}
@@ -371,11 +371,51 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
                             {children}
                           </strong>
                         ),
-                        code: ({ children }) => (
-                          <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded text-xs font-mono">
-                            {children}
-                          </code>
-                        )
+                        code: ({ node, inline, className, children, ...props }) => {
+                          const langMatch = /language-(\w+)/.exec(className || '');
+                          const lang = langMatch ? langMatch[1] : null;
+
+                          // Nome legível para algumas linguagens
+                          const langMap = {
+                            js: 'JavaScript',
+                            jsx: 'JSX',
+                            ts: 'TypeScript',
+                            tsx: 'TSX',
+                            py: 'Python',
+                            java: 'Java',
+                            rb: 'Ruby',
+                            sh: 'Shell',
+                            bash: 'Bash',
+                            json: 'JSON',
+                            html: 'HTML',
+                            css: 'CSS'
+                          };
+
+                          const prettyLang = lang ? (langMap[lang] || lang.toUpperCase()) : null;
+
+                          if (inline) {
+                            return (
+                              <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+
+                          return (
+                            <div className="relative my-3">
+                              {prettyLang && (
+                                <div className="absolute -top-3 right-0 bg-dark-surface border border-dark-border rounded-t px-2 py-1 text-xs text-gray-300">
+                                  {prettyLang}
+                                </div>
+                              )}
+                              <pre className="bg-dark-bg border border-dark-border rounded-lg p-3 overflow-x-auto text-sm font-mono">
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              </pre>
+                            </div>
+                          );
+                        }
                       }}
                     >
                       {message.content}
