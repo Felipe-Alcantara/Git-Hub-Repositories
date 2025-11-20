@@ -70,12 +70,13 @@
 ## 🌟 Destaques
 
 - 🐙 **Importação automática do GitHub** - Cole URL ou nome de usuário e importe repositórios com README
+- 🤖 **IA integrada com Gemini** - Chat inteligente e geração automática de conteúdo por aba
 - ☁️ **Sincronização na nuvem** - Backup via GitHub Gist para acessar de qualquer lugar
 - 🎨 **Canvas de desenho infinito** - Esboce arquiteturas e fluxos diretamente no projeto
 - 🌳 **Estrutura VSCode-style** - Organize arquivos com drag & drop visual
 - 📊 **Estatísticas reais** - Visualize linguagens com dados reais do GitHub
 - 🎯 **Kanban customizável** - Crie grupos e reorganize com drag & drop
-- 📝 **Markdown completo** - Edição e preview com GFM support
+- 📝 **Markdown completo** - Edição e preview com GFM support e blocos de código inteligentes
 - 🔍 **Filtros avançados** - Busca por autor, linguagem, complexidade e mais
 
 ## ✨ Funcionalidades
@@ -127,6 +128,7 @@ Cada projeto tem uma página completa com seções editáveis:
 - 📈 **Upgrades** - Próximas atualizações
 - 🌳 **Estrutura** - Árvore de arquivos do projeto (VSCode-style)
 - 🎨 **Sketches** - Canvas de desenho infinito com pan/zoom
+- 🤖 **IA Integrada** - Botões "Gerar por IA" em cada seção + chat inteligente
 
 ### 🎨 Canvas de Desenho
 - Canvas infinito virtual (4000x3000px)
@@ -148,6 +150,7 @@ Cada projeto tem uma página completa com seções editáveis:
 - Suporte completo a GitHub Flavored Markdown (GFM)
 - Preview em tempo real
 - Tabelas, checkboxes, código com syntax highlight
+- **Blocos de código inteligentes** - Labels de linguagem e botões de copiar
 - Links editáveis para URLs externas
 
 ### ☁️ Sincronização via Gist
@@ -169,6 +172,15 @@ Cada projeto tem uma página completa com seções editáveis:
 - Selecionar vários projetos simultaneamente
 - Deletar múltiplos projetos de uma vez
 - Contador de selecionados
+
+### 🤖 Inteligência Artificial e Chat
+- **Chat com IA** - Painel lateral com chat inteligente sobre projetos
+- **Geração Automática por Aba** - Botões "Gerar por IA" em cada seção editável (Ideias, Melhorias, Problemas, etc.)
+- **Análise Contextual** - IA considera README, estrutura de arquivos e aba ativa
+- **Blocos de Código Inteligentes** - Labels de linguagem e botões de copiar em snippets de código
+- **Economia de Recursos** - Carregamento de arquivos só na aba Estrutura para otimizar performance
+- **API Google Gemini** - Respostas inteligentes com limite aumentado e continuação automática
+- **Perguntas Livres** - Faça qualquer pergunta sobre o projeto no chat
 
 ### 🌐 100% Client-Side
 - Sem backend necessário
@@ -208,6 +220,12 @@ Basta acessar: **[https://felipe-alcantara.github.io/Git-Hub-Repositories/](http
    - Escolha "Fazer Backup"
    - Seus projetos ficam seguros no GitHub Gist
 
+5. **Use a IA para análise**
+   - Configure API Key do Google Gemini
+   - Abra chat de IA em qualquer projeto
+   - Clique "Gerar por IA" nas abas para conteúdo automático
+   - Faça perguntas específicas sobre o projeto
+
 ### Desenvolvimento Local
 
 ```bash
@@ -245,13 +263,15 @@ npm run preview
 - **@dnd-kit/sortable** - Listas ordenáveis
 - **@dnd-kit/utilities** - Utilitários DnD
 
-### Markdown
+### Markdown & Conteúdo
 - **react-markdown** - Renderização de Markdown
 - **remark-gfm** - GitHub Flavored Markdown
+- **React Syntax Highlighter** - Destaque de sintaxe em blocos de código
 
 ### APIs Externas
 - **GitHub REST API** - Dados de repositórios
 - **GitHub Gist API** - Sincronização na nuvem
+- **Google Gemini API** - Inteligência artificial para análise e geração de conteúdo
 
 ### Persistência
 - **localStorage** - Armazenamento local
@@ -270,7 +290,10 @@ src/
 │   ├── GistSyncModal.jsx       # Sincronização via Gist
 │   ├── TagSelector.jsx         # Seletor de tags/linguagens
 │   ├── DrawingCanvas.jsx       # Canvas de desenho infinito
-│   └── ProjectStructureTree.jsx # Árvore de arquivos
+│   ├── ProjectStructureTree.jsx # Árvore de arquivos
+│   ├── AIExplanationPanel.jsx  # Chat e geração com IA
+│   ├── AIExplanationModal.jsx  # Modal de explicação com IA
+│   └── ModalShell.jsx          # Shell para modais
 ├── pages/                   # Páginas principais
 │   ├── Home.jsx             # Dashboard com Kanban/Grid/List
 │   └── ProjectPage.jsx      # Página detalhada do projeto
@@ -280,6 +303,7 @@ src/
 │   ├── storage.js           # Persistência localStorage
 │   ├── github.js            # Integração GitHub API
 │   ├── gist.js              # Integração Gist API
+│   ├── gemini.js            # Integração Google Gemini API
 │   └── tags.js              # Gerenciamento de tags
 ├── App.jsx                  # Componente raiz
 └── main.jsx                 # Entry point
@@ -416,6 +440,32 @@ src/
 5. Ícones coloridos por tipo
 6. Ordenação automática
 
+### 🤖 Inteligência Artificial
+
+#### Chat com IA
+1. Abra um projeto e clique no botão "Chat com IA" (painel direito)
+2. Configure sua API Key do Google Gemini nas configurações
+3. Faça perguntas sobre o projeto ou gere explicações automáticas
+4. A IA considera o contexto da aba ativa e arquivos carregados
+
+#### Geração por Aba
+1. Em qualquer aba editável (Ideias, Melhorias, etc.), clique em "Gerar por IA"
+2. A IA gera conteúdo específico para aquela seção
+3. Conteúdo aparece automaticamente no chat
+4. Use para brainstorming, análise de problemas ou planejamento
+
+#### Blocos de Código
+- Snippets de código mostram label da linguagem (JavaScript, Python, etc.)
+- Botão de copiar para facilitar uso
+- Destaque de sintaxe para melhor legibilidade
+- Suporte a múltiplas linguagens
+
+#### Limites e Otimização
+- Respostas com até 4096 tokens para conteúdo extenso
+- Continuação automática se resposta parecer truncada
+- Carregamento de arquivos só na aba "Estrutura" para economia de recursos
+- API gratuita com limites de 60/min e 1000/dia
+
 ## 🎯 Casos de Uso
 
 1. **Desenvolvedor Solo**
@@ -481,10 +531,19 @@ Se você escolher usar a sincronização:
 - Token com permissão `gist` necessário
 - Sem acesso de terceiros
 
+### Google Gemini API
+Quando você usa as funcionalidades de IA:
+- Dados são enviados para a API do Google Gemini
+- Apenas contexto do projeto (README, estrutura) é compartilhado
+- Respostas são processadas localmente no navegador
+- Token é armazenado apenas no seu navegador
+- Sem armazenamento permanente de dados na API
+
 ### Recomendações
 - ✅ Use token do GitHub para melhor experiência
+- ✅ Configure API Key do Gemini para funcionalidades de IA
 - ✅ Faça backups regulares (export JSON ou Gist)
-- ✅ Não compartilhe seu token com ninguém
+- ✅ Não compartilhe seus tokens com ninguém
 - ✅ Revogue tokens não utilizados
 
 ## 📚 Documentação Completa
@@ -560,12 +619,63 @@ Feito com ❤️ por **[Felipe Alcantara](https://github.com/Felipe-Alcantara)**
 ✅ **Em produção ativa** - Novas features sendo adicionadas regularmente!
 
 **Últimas atualizações:**
+- 🤖 **Chat com IA** - Integração com Google Gemini para análise de projetos
+- 🎯 **Geração por Aba** - Botões "Gerar por IA" em seções editáveis
+- 📋 **Labels de Código** - Badges de linguagem e botões de copiar em snippets
+- ⚡ **Limites Aumentados** - Respostas de IA com até 4096 tokens e continuação automática
+- 🔄 **Otimização de Recursos** - Carregamento contextual só na aba Estrutura
 - ☁️ Sincronização via GitHub Gist
 - 🐙 Importação automática de README
 - 🎨 Canvas de desenho infinito
 - 🌳 Estrutura de arquivos VSCode-style
 - 📊 Estatísticas de linguagens do GitHub
 - 🎯 Kanban com drag & drop customizável
+
+---
+
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Este projeto é open source e aceita melhorias de qualquer tipo.
+
+### Como Contribuir
+
+1. **Fork** o projeto
+2. Crie uma **branch** para sua feature (`git checkout -b feature/AmazingFeature`)
+3. **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. **Push** para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um **Pull Request**
+
+### Ideias para Contribuições
+
+- 🐛 **Bug Fixes** - Correção de bugs e melhorias de performance
+- ✨ **Novas Features** - Adição de funcionalidades úteis
+- 🎨 **UI/UX** - Melhorias na interface e experiência do usuário
+- 📱 **Responsividade** - Otimização para dispositivos móveis
+- 🌍 **Internacionalização** - Suporte a outros idiomas
+- 🔧 **Integrações** - Novas APIs e serviços
+- 📚 **Documentação** - Melhorias no README e docs
+
+### Desenvolvimento Local
+
+```bash
+# Clone o repositório
+git clone https://github.com/felipe-alcantara/Git-Hub-Repositories.git
+
+# Entre no diretório
+cd Git-Hub-Repositories
+
+# Instale as dependências
+npm install
+
+# Execute em modo desenvolvimento
+npm run dev
+```
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
