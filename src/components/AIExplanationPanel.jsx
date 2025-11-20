@@ -345,7 +345,9 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
                   </div>
                 </div>
               ) : (
-                <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                <div className="rounded-lg p-3 bg-purple-500/10 text-white border border-purple-500/30 text-sm whitespace-pre-wrap">
+                  {message.content}
+                </div>
               )}
             </div>
 
