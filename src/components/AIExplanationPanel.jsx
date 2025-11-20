@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Sparkles, Loader2, Send, MessageCircle, Bot, User } from 'lucide-react';
+import { X, Sparkles, Loader2, Send, MessageCircle, Bot, User, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { explainProjectWithGemini, loadGeminiApiKey, askGeminiQuestion, flattenStructure, collectFilesPreview } from '../utils/gemini';
 import ProjectStructureTree from './ProjectStructureTree';
@@ -22,6 +22,29 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const [copiedMessageId, setCopiedMessageId] = useState(null);
+
+  const copyToClipboard = async (text, id) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text || '');
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text || '';
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedMessageId(id);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar:', err);
+    }
   };
 
   useEffect(() => {
@@ -261,46 +284,65 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
               </div>
             )}
 
-            <div
-              className={`max-w-[80%] rounded-lg p-3 ${
-                message.type === 'user'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-dark-bg border border-dark-border text-gray-200'
-              }`}
-            >
+            <div className="max-w-[80%]">
               {message.type === 'ai' ? (
-                <div className="prose prose-invert max-w-none text-sm prose-headings:text-white prose-headings:font-semibold prose-headings:border-b prose-headings:border-gray-600 prose-headings:pb-1 prose-headings:mb-3 prose-p:text-gray-200 prose-p:leading-relaxed prose-ul:text-gray-200 prose-li:marker:text-purple-400 prose-strong:text-white prose-strong:font-medium prose-code:text-purple-300 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs">
-                  <ReactMarkdown
-                    components={{
-                      h2: ({ children }) => (
-                        <h2 className="text-base font-bold text-white mt-4 mb-2 first:mt-0 flex items-center gap-2">
-                          {children}
-                        </h2>
-                      ),
-                      ul: ({ children }) => (
-                        <ul className="space-y-1 ml-4 mb-3">
-                          {children}
-                        </ul>
-                      ),
-                      li: ({ children }) => (
-                        <li className="text-gray-200 leading-relaxed">
-                          {children}
-                        </li>
-                      ),
-                      strong: ({ children }) => (
-                        <strong className="text-white font-semibold">
-                          {children}
-                        </strong>
-                      ),
-                      code: ({ children }) => (
-                        <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded text-xs font-mono">
-                          {children}
-                        </code>
-                      )
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                <div className="flex flex-col">
+                  <div className="rounded-lg p-3 bg-dark-bg border border-dark-border text-gray-200">
+                    <div className="prose prose-invert max-w-none text-sm prose-headings:text-white prose-headings:font-semibold prose-headings:border-b prose-headings:border-gray-600 prose-headings:pb-1 prose-headings:mb-3 prose-p:text-gray-200 prose-p:leading-relaxed prose-ul:text-gray-200 prose-li:marker:text-purple-400 prose-strong:text-white prose-strong:font-medium prose-code:text-purple-300 prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs">
+                    <div>
+                      <ReactMarkdown
+                      components={{
+                        h2: ({ children }) => (
+                          <h2 className="text-base font-bold text-white mt-4 mb-2 first:mt-0 flex items-center gap-2">
+                            {children}
+                          </h2>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="space-y-1 ml-4 mb-3">
+                            {children}
+                          </ul>
+                        ),
+                        li: ({ children }) => (
+                          <li className="text-gray-200 leading-relaxed">
+                            {children}
+                          </li>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="text-white font-semibold">
+                            {children}
+                          </strong>
+                        ),
+                        code: ({ children }) => (
+                          <code className="bg-gray-800 text-purple-300 px-1.5 py-0.5 rounded text-xs font-mono">
+                            {children}
+                          </code>
+                        )
+                      }}
+                    >
+                      {message.content}
+                      </ReactMarkdown>
+                    </div>
+                    </div>
+                  </div>
+                  <div className="mt-1 flex justify-start">
+                    <button
+                      onClick={() => copyToClipboard(message.content, message.id)}
+                      className="group flex items-center gap-2 px-2 py-1 rounded-full hover:bg-dark-surface transition-colors"
+                      title="Copiar resposta"
+                      aria-label="Copiar resposta"
+                    >
+                      <span className="p-1 rounded-full border border-dark-border bg-dark-surface flex items-center justify-center">
+                        {copiedMessageId === message.id ? (
+                          <Check className="w-4 h-4 text-green-400" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-gray-300" />
+                        )}
+                      </span>
+                      <span className="text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {copiedMessageId === message.id ? 'Copiado' : 'Copiar'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-sm whitespace-pre-wrap">{message.content}</div>
