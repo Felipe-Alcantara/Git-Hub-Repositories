@@ -19,6 +19,8 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.20.1",
     "remark-gfm": "^4.0.1"
+    ,"lz-string": "^1.4.4",
+    "idb-keyval": "^6.0.3"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

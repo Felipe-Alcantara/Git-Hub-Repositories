@@ -2,16 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Sparkles, Loader2, Send, MessageCircle, Bot, User, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { explainProjectWithGemini, loadGeminiApiKey, askGeminiQuestion, flattenStructure, collectFilesPreview } from '../utils/gemini';
+import { saveAiChat, loadAiChat, deleteAiChat, saveAiChatLocalFallback, loadAiChatLocalFallback } from '../utils/aiStorage';
 import ProjectStructureTree from './ProjectStructureTree';
 import ModalShell from './ModalShell';
 import { parseGitHubUrl, fetchGitHubFileContent, getGitHubToken } from '../utils/github';
 import { updateProject } from '../utils/storage';
 
 export default function AIExplanationPanel({ visible, onClose, project, activeSection, generateSectionRequest, onGenerateHandled }) {
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem(`aiChat_${project?.id}`);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [messages, setMessages] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,23 +71,85 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
     scrollToBottom();
   }, [messages]);
 
-  // Salva mensagens no localStorage quando mudam
+  // Salva mensagens com compressão em IndexedDB (idb-keyval); fallback para localStorage e sessionStorage
   useEffect(() => {
-    if (project?.id && messages.length > 0) {
-      localStorage.setItem(`aiChat_${project.id}`, JSON.stringify(messages));
-    }
+    if (!project?.id || messages.length === 0) return;
+
+    let mounted = true;
+    const key = `aiChat_${project.id}`;
+
+    (async () => {
+      try {
+        const saved = await saveAiChat(project.id, messages);
+        if (saved) {
+          // sucesso em IndexedDB
+          return;
+        }
+      } catch (err) {
+        console.warn('[AI] IndexedDB save failed, falling back:', err);
+      }
+
+      // IndexedDB falhou ou não disponível: tentar fallback compressado em localStorage
+      try {
+        const fallbackSaved = saveAiChatLocalFallback(project.id, messages);
+        if (fallbackSaved) return;
+      } catch (err) {
+        console.warn('[AI] localStorage compressed fallback failed:', err);
+      }
+
+      // Último recurso: salvar apenas as últimas 10 mensagens em sessionStorage sem compressão
+      try {
+        sessionStorage.setItem(key, JSON.stringify(messages.slice(-10)));
+        console.info('[AI] Chat salvo no sessionStorage como fallback final');
+      } catch (err) {
+        console.error('[AI] Falha ao salvar chat no sessionStorage. A conversa pode não ser persistida.', err);
+      }
+    })();
+
+    return () => { mounted = false; };
   }, [messages, project?.id]);
 
   // Carrega mensagens salvas quando o projeto muda
   useEffect(() => {
-    if (project?.id) {
-      const saved = localStorage.getItem(`aiChat_${project.id}`);
-      if (saved) {
-        setMessages(JSON.parse(saved));
-      } else {
-        setMessages([]);
+    if (!project?.id) return;
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        // First try IndexedDB compressed load
+        const loaded = await loadAiChat(project.id);
+        if (loaded && isMounted) {
+          setMessages(loaded);
+          return;
+        }
+      } catch (err) {
+        console.warn('[AI] Falha ao carregar chat do IndexedDB:', err);
       }
-    }
+
+      // Fallback: try localStorage compressed
+      try {
+        const loadedLocal = loadAiChatLocalFallback(project.id);
+        if (loadedLocal && isMounted) {
+          setMessages(loadedLocal);
+          return;
+        }
+      } catch (err) {
+        console.warn('[AI] Falha ao carregar chat do localStorage fallback:', err);
+      }
+
+      // Final fallback: check sessionStorage raw
+      try {
+        const raw = sessionStorage.getItem(`aiChat_${project.id}`);
+        if (raw && isMounted) setMessages(JSON.parse(raw));
+        else if (isMounted) setMessages([]);
+      } catch (err) {
+        console.warn('[AI] Falha ao carregar chat do sessionStorage:', err);
+        if (isMounted) setMessages([]);
+      }
+    })();
+
+    return () => { isMounted = false; };
   }, [project?.id]);
 
   const generateInitialExplanation = async () => {
@@ -276,7 +336,16 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
 
   const clearChat = () => {
     setMessages([]);
-    localStorage.removeItem(`aiChat_${project?.id}`);
+    // Remove from IndexedDB / localStorage / sessionStorage
+    (async () => {
+      try {
+        await deleteAiChat(project.id);
+      } catch (err) {
+        console.warn('[AI] Falha ao deletar chat do IndexedDB:', err);
+      }
+      try { localStorage.removeItem(`aiChat_${project?.id}`); } catch (e) {}
+      try { sessionStorage.removeItem(`aiChat_${project?.id}`); } catch (e) {}
+    })();
   };
 
   if (!visible) return null;

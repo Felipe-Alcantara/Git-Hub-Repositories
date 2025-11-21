@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles, Copy, Check } from 'lucide-react';
@@ -849,7 +850,15 @@ export default function ProjectPage() {
                                   h2: ({node, ...props}) => <h2 className="text-xl font-bold text-white mb-3 mt-5" {...props} />,
                                   h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-white mb-2 mt-4" {...props} />,
                                   h4: ({node, ...props}) => <h4 className="text-base font-semibold text-white mb-2 mt-3" {...props} />,
-                                  p: ({node, ...props}) => <p className="text-gray-300 mb-3 leading-relaxed" {...props} />,
+                                  p: ({node, children, ...props}) => {
+                                    // Evita <p> envolvendo blocos de código (<pre>), o que causa warnings de DOM nesting
+                                    const childArray = React.Children.toArray(children);
+                                    if (childArray.some(c => c?.type === 'pre')) {
+                                      // retorna apenas os filhos sem o <p>
+                                      return <>{children}</>;
+                                    }
+                                    return <p className="text-gray-300 mb-3 leading-relaxed" {...props} />;
+                                  },
                                   a: ({node, ...props}) => <a className="text-blue-400 hover:text-blue-300 underline" {...props} />,
                                   ul: ({node, ...props}) => <ul className="list-disc list-inside mb-3 text-gray-300 space-y-1" {...props} />,
                                   ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-3 text-gray-300 space-y-1" {...props} />,
