@@ -48,7 +48,8 @@ export default function ProjectCard({
   const handleCheckboxClick = (e) => {
     e.stopPropagation();
     if (onToggleSelect) {
-      onToggleSelect(project.id);
+      // Propaga se Shift está pressionado para seleção por intervalo
+      onToggleSelect(project.id, { shiftKey: e.shiftKey });
     }
   };
 

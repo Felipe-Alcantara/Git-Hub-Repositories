@@ -38,6 +38,7 @@ export default function Home() {
   const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity, custom
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
+  const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
   const [customOrder, setCustomOrder] = useState(() => getCustomOrder()); // Estado local da ordem
   const [newGroupName, setNewGroupName] = useState(''); // Nome do novo grupo
   const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
@@ -237,12 +238,40 @@ export default function Home() {
     );
   };
 
-  const toggleProjectSelection = (projectId) => {
-    setSelectedProjects(prev => 
-      prev.includes(projectId)
-        ? prev.filter(id => id !== projectId)
-        : [...prev, projectId]
-    );
+  const toggleProjectSelection = (projectId, opts = {}) => {
+    const { shiftKey } = opts;
+    // Encontrar o índice do projeto na lista filtrada (visível)
+    const clickedIndex = filteredProjects.findIndex(p => p.id === projectId);
+
+    if (shiftKey && lastSelectedIndex !== null && clickedIndex !== -1) {
+      // Seleção em intervalo entre lastSelectedIndex e clickedIndex
+      const start = Math.min(lastSelectedIndex, clickedIndex);
+      const end = Math.max(lastSelectedIndex, clickedIndex);
+      const idsInRange = filteredProjects.slice(start, end + 1).map(p => p.id);
+
+      setSelectedProjects(prev => {
+        const setPrev = new Set(prev);
+        idsInRange.forEach(id => setPrev.add(id));
+        return Array.from(setPrev);
+      });
+
+      // Atualizar o último índice selecionado
+      setLastSelectedIndex(clickedIndex);
+      return;
+    }
+
+    // Toggle normal (sem Shift)
+    setSelectedProjects(prev => {
+      if (prev.includes(projectId)) {
+        // Deselecionar
+        return prev.filter(id => id !== projectId);
+      }
+      // Selecionar
+      return [...prev, projectId];
+    });
+
+    // Atualizar estado do último selecionado para futuras seleções com Shift
+    if (clickedIndex !== -1) setLastSelectedIndex(clickedIndex);
   };
 
   const toggleSelectAll = () => {
@@ -250,6 +279,7 @@ export default function Home() {
       setSelectedProjects([]);
     } else {
       setSelectedProjects(filteredProjects.map(p => p.id));
+      setLastSelectedIndex(null);
     }
   };
 
@@ -278,6 +308,7 @@ export default function Home() {
 
     // Limpar seleção após ação
     setSelectedProjects([]);
+    setLastSelectedIndex(null);
   };
 
   const handleSaveProject = (projectData) => {
