@@ -226,6 +226,9 @@ export default function Home() {
     return filtered;
   }, [projects, searchTerm, filterComplexity, filterStatus, filterTags, filterOwners, filterReadme, sortBy, customOrder]);
 
+  const completedCount = projects.filter(p => p.isCompleted).length;
+  const uncompletedCount = projects.length - completedCount;
+
   const toggleTagFilter = (tag) => {
     setFilterTags(prev => 
       prev.includes(tag) 
@@ -515,7 +518,7 @@ export default function Home() {
               <div>
                 <h1 className="text-3xl font-bold text-white">Meus Projetos</h1>
                 <p className="text-gray-400 mt-1">
-                  {projects.length} {projects.length === 1 ? 'projeto' : 'projetos'}
+                  {projects.length} {projects.length === 1 ? 'projeto' : 'projetos'} ({completedCount} finalizados, {uncompletedCount} não finalizados)
                 </p>
               </div>
 
