@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Check, Settings, User, HelpCircle } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Check, Undo, Settings, User, HelpCircle } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import TutorialModal from '../components/TutorialModal';
@@ -118,6 +118,10 @@ export default function Home() {
       window.removeEventListener('scroll', updatePos);
     };
   }, [showHelpBalloon]);
+
+  // Indicadores para os botões da seleção múltipla
+  const hasCompletedSelected = selectedProjects.some(id => projects.find(p => p.id === id)?.isCompleted);
+  const hasUncompletedSelected = selectedProjects.some(id => !projects.find(p => p.id === id)?.isCompleted);
 
   const kanbanGroups = useMemo(() => {
     const customGroups = getCustomGroups();
@@ -311,6 +315,27 @@ export default function Home() {
     setLastSelectedIndex(null);
   };
 
+  const handleUncompleteSelected = () => {
+    if (selectedProjects.length === 0) return;
+
+    // Apenas agir se houver algum finalizado entre os selecionados
+    const anyCompleted = selectedProjects.some(id => projects.find(p => p.id === id)?.isCompleted);
+    if (!anyCompleted) return;
+
+    const count = selectedProjects.length;
+    if (!confirm(`Remover marcação de finalizado de ${count} ${count === 1 ? 'projeto' : 'projetos'}?`)) return;
+
+    selectedProjects.forEach(id => {
+      const project = projects.find(p => p.id === id);
+      if (project && project.isCompleted) {
+        updateProject(id, { isCompleted: false });
+      }
+    });
+
+    setSelectedProjects([]);
+    setLastSelectedIndex(null);
+  };
+
   const handleSaveProject = (projectData) => {
     addProject(projectData);
     setIsModalOpen(false);
@@ -456,10 +481,19 @@ export default function Home() {
             </button>
             <button
               onClick={handleCompleteSelected}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded transition-colors"
+              className={`flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded transition-colors ${!hasUncompletedSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!hasUncompletedSelected}
             >
               <Check className="w-4 h-4" />
               Finalizar
+            </button>
+            <button
+              onClick={handleUncompleteSelected}
+              className={`flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded transition-colors ${!hasCompletedSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={!hasCompletedSelected}
+            >
+              <Undo className="w-4 h-4" />
+              Remover finalizado
             </button>
             
             <button
