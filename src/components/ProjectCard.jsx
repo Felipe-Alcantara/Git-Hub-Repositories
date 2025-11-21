@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle, FileText, AlertCircle } from 'lucide-react';
+import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle, FileText, AlertCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
@@ -323,7 +323,8 @@ export default function ProjectCard({
                 className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
                 title="Deletar"
               >
-                <span className="text-xs">×</span>
+                {/* Usar ícone Trash2 (tamanho consistente com outros ícones) */}
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
 
