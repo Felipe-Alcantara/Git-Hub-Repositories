@@ -31,7 +31,8 @@ export default function ProjectCard({
   onDragEnd,
   isDragging = false,
   isDragOver = false,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  index
 }) {
   const navigate = useNavigate();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
@@ -352,6 +353,13 @@ export default function ProjectCard({
             </div>
           </div>
         </div>
+
+        {/* Numeração no canto inferior esquerdo - apenas para modo lista */}
+        {viewMode === 'list' && index && (
+          <div className="absolute bottom-2 left-2 text-xs text-gray-500 font-medium">
+            #{index}
+          </div>
+        )}
       </div>
     );
   }

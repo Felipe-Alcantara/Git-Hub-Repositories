@@ -1168,7 +1168,7 @@ function DnDSortableProjects({ projects, viewMode, selectedProjects, onToggleSel
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={projectIds} strategy={sortingStrategy}>
-        {projects.map(project => (
+        {projects.map((project, index) => (
           <SortableProjectCard
             key={project.id}
             project={project}
@@ -1176,6 +1176,7 @@ function DnDSortableProjects({ projects, viewMode, selectedProjects, onToggleSel
             isSelected={selectedProjects.includes(project.id)}
             onToggleSelect={onToggleSelect}
             onDelete={onDelete}
+            index={index + 1}
           />
         ))}
       </SortableContext>
@@ -1184,7 +1185,7 @@ function DnDSortableProjects({ projects, viewMode, selectedProjects, onToggleSel
 }
 
 // Wrapper que aplica transformações do DnD Kit ao card
-function SortableProjectCard({ project, viewMode, isSelected, onToggleSelect, onDelete }) {
+function SortableProjectCard({ project, viewMode, isSelected, onToggleSelect, onDelete, index }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id });
   const style = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
@@ -1202,6 +1203,7 @@ function SortableProjectCard({ project, viewMode, isSelected, onToggleSelect, on
         onDelete={onDelete}
         draggable={false}
         isDragging={isDragging}
+        index={index}
       />
     </div>
   );
