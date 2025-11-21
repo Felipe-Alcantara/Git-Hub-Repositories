@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Settings, User, HelpCircle } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Check, Settings, User, HelpCircle } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import TutorialModal from '../components/TutorialModal';
@@ -263,6 +263,23 @@ export default function Home() {
     }
   };
 
+  const handleCompleteSelected = () => {
+    if (selectedProjects.length === 0) return;
+
+    const count = selectedProjects.length;
+    if (!confirm(`Marcar ${count} ${count === 1 ? 'projeto' : 'projetos'} como finalizado?`)) return;
+
+    selectedProjects.forEach(id => {
+      const project = projects.find(p => p.id === id);
+      if (project && !project.isCompleted) {
+        updateProject(id, { isCompleted: true });
+      }
+    });
+
+    // Limpar seleção após ação
+    setSelectedProjects([]);
+  };
+
   const handleSaveProject = (projectData) => {
     addProject(projectData);
     setIsModalOpen(false);
@@ -405,6 +422,13 @@ export default function Home() {
             >
               <Trash2 className="w-4 h-4" />
               Deletar
+            </button>
+            <button
+              onClick={handleCompleteSelected}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              Finalizar
             </button>
             
             <button
