@@ -56,6 +56,7 @@ export const getProjects = () => {
     }
     const data = localStorage.getItem(STORAGE_KEY);
     const projects = data ? JSON.parse(data) : [];
+    console.debug('[storage] getProjects - dados lidos do localStorage:', projects?.length || 0, 'projetos');
     
     // Migração: adiciona campo 'group' em projetos antigos
     const migratedProjects = projects.map(project => ({
@@ -79,9 +80,11 @@ export const getProjects = () => {
     
     // Salva de volta se houve mudanças
     if (projects.length > 0 && (projects.some(p => !p.group) || projects.some(p => !p.details?.sketches))) {
+      console.info('[storage] getProjects - detectei projeto(s) com formato antigo, executando migração e salvando');
       saveProjects(migratedProjects);
     }
     
+    console.debug('[storage] getProjects - retorno após migração:', migratedProjects.length, 'projetos');
     return migratedProjects;
   } catch (error) {
     console.error('Erro ao carregar projetos:', error);
@@ -92,10 +95,12 @@ export const getProjects = () => {
 // Salvar todos os projetos
 export const saveProjects = (projects) => {
   try {
+    console.debug('[storage] saveProjects - salvando', projects?.length || 0, 'projetos');
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    console.info('[storage] saveProjects - salvou com sucesso');
     return true;
   } catch (error) {
-    console.error('Erro ao salvar projetos:', error);
+    console.error('[storage] saveProjects - Erro ao salvar projetos:', error);
     return false;
   }
 };
@@ -110,8 +115,10 @@ export const addProject = (project) => {
     createdAt: new Date().toISOString(),
     lastModified: new Date().toISOString(),
   };
+  console.debug('[storage] addProject - adicionando novo projeto:', newProject.name || '<sem nome>', newProject.id);
   projects.push(newProject);
-  saveProjects(projects);
+  const ok = saveProjects(projects);
+  if (!ok) console.error('[storage] addProject - falha ao salvar após adicionar projeto', newProject.id);
   return newProject;
 };
 
@@ -128,7 +135,9 @@ export const updateProject = (id, updates) => {
     lastModified: new Date().toISOString(),
   };
   
-  saveProjects(projects);
+  console.debug('[storage] updateProject - atualizando projeto', id, 'com', updates);
+  const ok = saveProjects(projects);
+  if (!ok) console.error('[storage] updateProject - falha ao salvar projeto atualizado', id);
   return projects[index];
 };
 
@@ -136,13 +145,16 @@ export const updateProject = (id, updates) => {
 export const deleteProject = (id) => {
   const projects = getProjects();
   const filtered = projects.filter(p => p.id !== id);
-  saveProjects(filtered);
+  console.debug('[storage] deleteProject - removendo projeto', id);
+  const ok = saveProjects(filtered);
+  if (!ok) console.error('[storage] deleteProject - falha ao salvar após remover projeto', id);
   return filtered;
 };
 
 // Obter projeto por ID
 export const getProjectById = (id) => {
   const projects = getProjects();
+  console.debug('[storage] getProjectById - buscando id:', id);
   return projects.find(p => p.id === id);
 };
 
@@ -158,6 +170,7 @@ export const exportProjects = (projectIds = null) => {
   const url = URL.createObjectURL(dataBlob);
   const link = document.createElement('a');
   
+  console.info('[storage] exportProjects - preparando arquivo com', toExport.length, 'projetos para download');
   link.href = url;
   link.download = `github-projects-${new Date().toISOString().split('T')[0]}.json`;
   document.body.appendChild(link);
@@ -176,13 +189,15 @@ export const importProjects = (file) => {
         const importedProjects = JSON.parse(e.target.result);
         
         if (!Array.isArray(importedProjects)) {
+          console.warn('[storage] importProjects - arquivo não é um array de projetos');
           throw new Error('Formato inválido: deve ser um array de projetos');
         }
         
+        console.info('[storage] importProjects - processando arquivo com', importedProjects.length, 'items');
         const currentProjects = getProjects();
         
         // Gerar novos IDs para evitar conflitos
-        const processedProjects = importedProjects.map(project => ({
+        const processedProjects = importedProjects.map((project, idx) => ({
           ...project,
           id: crypto.randomUUID(),
           lastModified: new Date().toISOString(),
@@ -198,10 +213,11 @@ export const importProjects = (file) => {
           if (!key) return true; // projetos sem chave serão adicionados
           return !existingKeys.has(key);
         });
-
+        console.debug('[storage] importProjects - permitidas duplicatas?', allowDuplicates, '-> adicionando', filteredToAdd.length, 'projetos');
         const mergedProjects = [...currentProjects, ...filteredToAdd];
         saveProjects(mergedProjects);
         
+        console.info('[storage] importProjects - import finalizado, itens importados:', filteredToAdd.length);
         resolve({
           success: true,
           imported: filteredToAdd.length,
@@ -212,7 +228,10 @@ export const importProjects = (file) => {
       }
     };
     
-    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.onerror = () => {
+      console.error('[storage] importProjects - erro na leitura do arquivo');
+      reject(new Error('Erro ao ler arquivo'));
+    };
     reader.readAsText(file);
   });
 };
@@ -221,6 +240,7 @@ export const importProjects = (file) => {
 export const getAllowDuplicates = () => {
   try {
     const v = localStorage.getItem(ALLOW_DUPLICATES_KEY);
+    console.debug('[storage] getAllowDuplicates - valor:', v);
     return v === 'true';
   } catch (e) {
     return false;
@@ -229,16 +249,18 @@ export const getAllowDuplicates = () => {
 
 export const setAllowDuplicates = (value) => {
   try {
+    console.debug('[storage] setAllowDuplicates - definindo para', value);
     localStorage.setItem(ALLOW_DUPLICATES_KEY, value ? 'true' : 'false');
     return true;
   } catch (e) {
-    console.error('Erro ao salvar configuração de duplicatas:', e);
+    console.error('[storage] setAllowDuplicates - Erro ao salvar configuração de duplicatas:', e);
     return false;
   }
 };
 
 // Limpar todos os dados (útil para testes)
 export const clearAllProjects = () => {
+  console.warn('[storage] clearAllProjects - removendo todas as chaves relacionadas a projetos do localStorage');
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(CUSTOM_ORDER_KEY);
 };
@@ -247,9 +269,10 @@ export const clearAllProjects = () => {
 export const getCustomOrder = () => {
   try {
     const data = localStorage.getItem(CUSTOM_ORDER_KEY);
+    console.debug('[storage] getCustomOrder - raw value:', data);
     return data ? JSON.parse(data) : [];
   } catch (error) {
-    console.error('Erro ao carregar ordem customizada:', error);
+    console.error('[storage] getCustomOrder - Erro ao carregar ordem customizada:', error);
     return [];
   }
 };
@@ -257,10 +280,11 @@ export const getCustomOrder = () => {
 // Salvar ordem customizada
 export const saveCustomOrder = (projectIds) => {
   try {
+    console.debug('[storage] saveCustomOrder - salvando ordem personalizada (items):', projectIds?.length || 0);
     localStorage.setItem(CUSTOM_ORDER_KEY, JSON.stringify(projectIds));
     return true;
   } catch (error) {
-    console.error('Erro ao salvar ordem customizada:', error);
+    console.error('[storage] saveCustomOrder - Erro ao salvar ordem customizada:', error);
     return false;
   }
 };
@@ -277,6 +301,7 @@ export const getCustomGroups = () => {
   try {
     const data = localStorage.getItem(CUSTOM_GROUPS_KEY);
     const savedGroups = data ? JSON.parse(data) : [];
+    console.debug('[storage] getCustomGroups - grupos encontrados:', savedGroups);
     
     // Se não há dados salvos, retorna ordem padrão
     if (savedGroups.length === 0) {
@@ -296,7 +321,7 @@ export const getCustomGroups = () => {
     
     return savedGroups;
   } catch (error) {
-    console.error('Erro ao carregar grupos customizados:', error);
+    console.error('[storage] getCustomGroups - Erro ao carregar grupos customizados:', error);
     return ['backlog', 'in-progress', 'completed'];
   }
 };
@@ -304,6 +329,7 @@ export const getCustomGroups = () => {
 // Adicionar grupo customizado
 export const addCustomGroup = (groupName) => {
   try {
+    console.debug('[storage] addCustomGroup - tentando adicionar grupo:', groupName);
     const groups = getCustomGroups();
     const normalizedName = groupName.toLowerCase().trim().replace(/\s+/g, '-');
     
@@ -313,9 +339,10 @@ export const addCustomGroup = (groupName) => {
     
     groups.push(normalizedName);
     localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(groups));
+    console.info('[storage] addCustomGroup - grupo adicionado:', normalizedName);
     return true;
   } catch (error) {
-    console.error('Erro ao adicionar grupo customizado:', error);
+    console.error('[storage] addCustomGroup - Erro ao adicionar grupo customizado:', error);
     return false;
   }
 };
@@ -323,6 +350,7 @@ export const addCustomGroup = (groupName) => {
 // Remover grupo customizado
 export const removeCustomGroup = (groupName) => {
   try {
+    console.debug('[storage] removeCustomGroup - removendo grupo:', groupName);
     const groups = getCustomGroups();
     const defaultGroups = ['backlog', 'in-progress', 'completed'];
     
@@ -333,25 +361,28 @@ export const removeCustomGroup = (groupName) => {
     
     const filtered = groups.filter(g => g !== groupName);
     localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(filtered));
+    console.info('[storage] removeCustomGroup - grupo removido:', groupName);
     return true;
   } catch (error) {
-    console.error('Erro ao remover grupo customizado:', error);
+    console.error('[storage] removeCustomGroup - Erro ao remover grupo customizado:', error);
     return false;
   }
 };
 
 // Limpar grupos customizados
 export const clearCustomGroups = () => {
+  console.warn('[storage] clearCustomGroups - limpando grupos customizados do localStorage');
   localStorage.removeItem(CUSTOM_GROUPS_KEY);
 };
 
 // Salvar ordem customizada dos grupos
 export const saveGroupsOrder = (orderedGroups) => {
   try {
+    console.debug('[storage] saveGroupsOrder - salvando ordem de grupos:', orderedGroups);
     localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(orderedGroups));
     return true;
   } catch (error) {
-    console.error('Erro ao salvar ordem dos grupos:', error);
+    console.error('[storage] saveGroupsOrder - Erro ao salvar ordem dos grupos:', error);
     return false;
   }
 };

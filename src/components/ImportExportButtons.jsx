@@ -6,21 +6,26 @@ export default function ImportExportButtons({ onImportComplete }) {
   const [importing, setImporting] = useState(false);
 
   const handleExport = () => {
+    console.debug('[ImportExportButtons] handleExport - iniciando export de projetos');
     exportProjects();
+    console.info('[ImportExportButtons] handleExport - gatilhou download dos projetos');
   };
 
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    console.debug('[ImportExportButtons] handleImport - arquivo selecionado para import:', file.name);
     setImporting(true);
     try {
       const result = await importProjects(file);
+      console.info('[ImportExportButtons] handleImport - import finalizado, imported:', result.imported);
       alert(`✅ ${result.imported} projeto(s) importado(s) com sucesso!`);
       if (onImportComplete) {
         onImportComplete();
       }
     } catch (error) {
+      console.error('[ImportExportButtons] handleImport - erro ao importar arquivo:', error);
       alert(`❌ Erro ao importar: ${error.message}`);
     } finally {
       setImporting(false);

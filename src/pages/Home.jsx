@@ -340,13 +340,16 @@ export default function Home() {
   };
 
   const handleSaveProject = (projectData) => {
-    addProject(projectData);
+    console.debug('[Home] handleSaveProject - adicionando novo projeto:', projectData?.name || '<sem nome>');
+    const created = addProject(projectData);
+    console.info('[Home] handleSaveProject - projeto criado com id:', created?.id);
     setIsModalOpen(false);
   };
 
   const handleBulkImport = (importedProjects) => {
     // Substituir todo o conjunto de projetos com os importados
     // usar a função utilitária saveProjects para garantir a mesma chave
+    console.debug('[Home] handleBulkImport - salvando bulk import de', importedProjects?.length || 0, 'projetos');
     saveProjects(importedProjects);
     // Recarregar a página para atualizar o estado
     window.location.reload();
@@ -354,6 +357,7 @@ export default function Home() {
 
   const handleDeleteProject = (id) => {
     if (confirm('Tem certeza que deseja deletar este projeto?')) {
+      console.debug('[Home] handleDeleteProject - deletando projeto com id:', id);
       deleteProject(id);
       setSelectedProjects(prev => prev.filter(selectedId => selectedId !== id));
     }

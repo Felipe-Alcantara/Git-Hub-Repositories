@@ -52,7 +52,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
     // Remove readme do nível raiz se existir
     delete projectData.readme;
     
-    console.log('[NewProjectModal] Salvando projeto com README:', {
+    console.debug('[NewProjectModal] handleSubmit - salvando projeto com README:', {
       name: projectData.name,
       hasReadme: !!projectData.details?.readme,
       readmeLength: projectData.details?.readme?.length || 0
@@ -85,6 +85,7 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       return;
     }
 
+    console.debug('[NewProjectModal] handleFetchFromGitHub - buscando dados do GitHub para URL:', formData.repoUrl);
     setLoading(true);
     setError('');
 
@@ -111,9 +112,9 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
       
       // Feedback visual sobre o README
       if (repoData.readme) {
-        console.log('✅ README importado com sucesso!');
+        console.info('[NewProjectModal] handleFetchFromGitHub - README importado com sucesso, tamanho:', repoData.readme.length);
       } else {
-        console.log('ℹ️ README não encontrado neste repositório');
+        console.info('[NewProjectModal] handleFetchFromGitHub - README não encontrado neste repositório');
       }
     } catch (err) {
       console.error('Erro ao buscar do GitHub:', err);

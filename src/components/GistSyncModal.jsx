@@ -35,18 +35,21 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
       return;
     }
 
+    console.debug('[GistSyncModal] handleUpload - iniciando upload (projetos):', projects.length);
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
       const result = await syncToGist(projects, token, savedGistId || null);
+      console.info('[GistSyncModal] handleUpload - syncToGist retornou id:', result.id);
       saveGistId(result.id);
       setSavedGistId(result.id);
       setGistId(result.id);
       setGistUrl(result.url);
       setSuccess(`✅ ${projects.length} projeto(s) sincronizado(s) com sucesso!`);
     } catch (err) {
+      console.error('[GistSyncModal] handleUpload - erro ao sincronizar:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -59,6 +62,7 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
       return;
     }
 
+    console.debug('[GistSyncModal] handleDownloadPreview - solicitando preview do gist:', gistId);
     setLoading(true);
     setError('');
     setPreviewData(null);
@@ -66,8 +70,10 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
     try {
       const token = getGitHubToken();
       const data = await loadFromGist(gistId.trim(), token);
+      console.info('[GistSyncModal] handleDownloadPreview - dados obtidos do gist:', data.projects?.length || 0);
       setPreviewData(data);
     } catch (err) {
+      console.error('[GistSyncModal] handleDownloadPreview - erro ao carregar preview:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -82,6 +88,7 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
                        `Deseja continuar?`;
     
     if (window.confirm(confirmMsg)) {
+      console.debug('[GistSyncModal] handleConfirmDownload - usuário confirmou importação de', previewData.projects.length, 'projetos');
       onProjectsImported(previewData.projects);
       saveGistId(gistId.trim());
       setSavedGistId(gistId.trim());
@@ -93,6 +100,7 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
   };
 
   const handleCopyGistId = () => {
+    console.debug('[GistSyncModal] handleCopyGistId - copiando gist id:', savedGistId || gistId);
     navigator.clipboard.writeText(savedGistId || gistId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -100,6 +108,7 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
 
   const handleClearGist = () => {
     if (window.confirm('Tem certeza que deseja desconectar este Gist?\n\nSeus projetos locais não serão afetados.')) {
+      console.info('[GistSyncModal] handleClearGist - desconectando gist localmente:', savedGistId);
       clearGistId();
       setSavedGistId('');
       setGistId('');
@@ -130,6 +139,7 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
     setSuccess('');
 
     try {
+      console.debug('[GistSyncModal] handleDeleteGist - deletando gist:', savedGistId);
       await deleteGist(savedGistId, token);
       clearGistId();
       setSavedGistId('');
@@ -141,6 +151,7 @@ export default function GistSyncModal({ isOpen, onClose, projects, onProjectsImp
         setMode('menu');
       }, 2000);
     } catch (err) {
+      console.error('[GistSyncModal] handleDeleteGist - erro ao deletar gist:', err);
       setError(err.message);
     } finally {
       setLoading(false);

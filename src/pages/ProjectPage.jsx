@@ -60,6 +60,7 @@ export default function ProjectPage() {
   const [aiGenerateRequest, setAiGenerateRequest] = useState(null);
 
   useEffect(() => {
+    console.debug('[ProjectPage] carregar projeto - id:', id);
     const loadedProject = getProjectById(id);
     if (!loadedProject) {
       navigate('/');
@@ -70,7 +71,13 @@ export default function ProjectPage() {
   }, [id, navigate]);
 
   const handleSave = () => {
-    updateProject(id, editedProject);
+    console.debug('[ProjectPage] handleSave - salvando projeto', id);
+    const updated = updateProject(id, editedProject);
+    if (updated) {
+      console.info('[ProjectPage] handleSave - salvo com sucesso:', id);
+    } else {
+      console.error('[ProjectPage] handleSave - falha ao salvar:', id);
+    }
     setProject(editedProject);
     setIsEditing(false);
   };
@@ -274,6 +281,7 @@ export default function ProjectPage() {
   const toggleCompleted = () => {
     const updated = { ...editedProject, isCompleted: !editedProject.isCompleted };
     setEditedProject(updated);
+    console.debug('[ProjectPage] toggleCompleted - toggling completed state for', id);
     updateProject(id, updated);
     setProject(updated);
   };
@@ -294,6 +302,7 @@ export default function ProjectPage() {
       webUrl: editedLinks.webUrl.trim(),
       downloadUrl: editedLinks.downloadUrl.trim()
     };
+    console.debug('[ProjectPage] saveLinks - atualizando links do projeto', id, updated);
     setEditedProject(updated);
     updateProject(id, updated);
     setProject(updated);

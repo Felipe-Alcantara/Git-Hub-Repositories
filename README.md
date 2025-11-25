@@ -198,6 +198,33 @@ Basta acessar: **[https://felipe-alcantara.github.io/Git-Hub-Repositories/](http
 
 ### Primeiros Passos
 
+## 🪵 Logs & Depuração (novo)
+
+Adicionei logs detalhados em todo o fluxo de download / salvamento / armazenamento de projetos para facilitar debugging e observabilidade.
+
+Onde os logs foram adicionados:
+- `src/utils/storage.js` — operações de leitura/gravação/import/export, migrações, ordem de projetos, grupos
+- `src/utils/github.js` — chamadas à API do GitHub (repo, linguagens, README, arquivos) com informações de rate-limit
+- `src/utils/gist.js` — sincronização (criar/atualizar), carregamento, exclusão e gestão do Gist ID no localStorage
+- `src/utils/aiStorage.js` — save/load/delete das conversas de IA (IndexedDB + fallback)
+- `src/hooks/useProjects.js` — logs no hook que adiciona/atualiza/deleta/reordena projetos
+- Componentes relevantes (ex.: `GistSyncModal.jsx`, `ImportExportButtons.jsx`, `NewProjectModal.jsx`, `ImportProfileModal.jsx`, `ProjectPage.jsx`, `Home.jsx`) também receberam logs de ação/erro/estado
+
+Como visualizar os logs:
+- Abra as DevTools do navegador (F12) → aba Console.
+- No filtro de nível de mensagens escolha "Verbose" / "All" para ver `console.debug` e `console.info`.
+
+Mensagens úteis que você verá:
+- [storage] ... — operações locais (get/save/add/update/delete/import/export)
+- [GitHub] ... — requisições e resultados do GitHub (inclui X-RateLimit-Remaining quando disponível)
+- [Gist] ... — upload/backup/restore do Gist
+- [aiStorage] ... — operações de persistência do histórico de IA
+- [useProjects] / [Home] / [ProjectPage] / [GistSyncModal] ... — ações disparadas via UI
+
+Notas de produção:
+- Estes logs são voltados para desenvolvimento; em ambientes de produção você pode ajustar o nível de logs nas DevTools (ou remover insights sensíveis) antes de publicar.
+
+
 1. **Importe seus repositórios do GitHub**
    - Clique em "Importar Perfil"
    - Cole seu nome de usuário do GitHub

@@ -8,7 +8,9 @@ const GITHUB_TOKEN_KEY = 'github_api_token';
  * @returns {string|null} - Token ou null
  */
 export function getGitHubToken() {
-  return localStorage.getItem(GITHUB_TOKEN_KEY);
+  const token = localStorage.getItem(GITHUB_TOKEN_KEY);
+  console.debug('[GitHub] getGitHubToken - token presente?', !!token);
+  return token;
 }
 
 /**
@@ -17,8 +19,10 @@ export function getGitHubToken() {
  */
 export function setGitHubToken(token) {
   if (token) {
+    console.info('[GitHub] setGitHubToken - salvando token no localStorage');
     localStorage.setItem(GITHUB_TOKEN_KEY, token);
   } else {
+    console.info('[GitHub] setGitHubToken - removendo token do localStorage');
     localStorage.removeItem(GITHUB_TOKEN_KEY);
   }
 }
@@ -118,6 +122,7 @@ export function parseGitHubUrl(url) {
  */
 export async function fetchGitHubRepo(owner, repo) {
   try {
+    console.debug('[GitHub] fetchGitHubRepo - iniciando busca', owner + '/' + repo);
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers: getGitHubHeaders()
     });
@@ -130,6 +135,7 @@ export async function fetchGitHubRepo(owner, repo) {
     }
     
     const data = await response.json();
+    console.info(`[GitHub] fetchGitHubRepo - obtive dados do repo ${owner}/${repo} - stars:${data.stargazers_count} forks:${data.forks_count}`);
     
     return {
       success: true,
@@ -164,6 +170,7 @@ export async function fetchGitHubRepo(owner, repo) {
  */
 export async function fetchGitHubLanguages(owner, repo) {
   try {
+    console.debug('[GitHub] fetchGitHubLanguages - iniciando para', owner + '/' + repo);
     const response = await retryableFetch(`https://api.github.com/repos/${owner}/${repo}/languages`, {
       headers: getGitHubHeaders()
     });
@@ -185,6 +192,7 @@ export async function fetchGitHubLanguages(owner, repo) {
     if (info && info.remaining !== null) {
       console.log(`[GitHub] X-RateLimit-Remaining: ${info.remaining}`);
     }
+    console.info('[GitHub] fetchGitHubLanguages - linguagens retornadas:', Object.keys(data).length);
     
     // Retorna o objeto completo com bytes por linguagem
     return data;
@@ -309,6 +317,7 @@ export async function fetchGitHubReadme(owner, repo) {
  */
 export async function fetchGitHubFileContent(owner, repo, path, branch = 'HEAD') {
   try {
+    console.debug('[GitHub] fetchGitHubFileContent - solicitando', `${owner}/${repo}/${path}#${branch}`);
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`, {
       headers: getGitHubHeaders()
     });
@@ -320,6 +329,7 @@ export async function fetchGitHubFileContent(owner, repo, path, branch = 'HEAD')
 
     const data = await res.json();
     if (!data.content) return '';
+    console.info('[GitHub] fetchGitHubFileContent - arquivo encontrado, tamanho codificado:', (data.content || '').length);
     const decoded = atob(data.content.replace(/\n/g, ''));
     try {
       return decodeURIComponent(escape(decoded));
@@ -339,6 +349,7 @@ export async function fetchGitHubFileContent(owner, repo, path, branch = 'HEAD')
  */
 export async function fetchUserRepositories(username) {
   try {
+    console.debug('[GitHub] fetchUserRepositories - iniciando para usuário', username);
     const repos = [];
     let page = 1;
     let hasMore = true;
@@ -372,6 +383,7 @@ export async function fetchUserRepositories(username) {
 
       const data = await response.json();
       
+      console.debug('[GitHub] fetchUserRepositories - page', page, 'results:', data.length);
       if (data.length === 0) {
         hasMore = false;
       } else {
@@ -384,6 +396,8 @@ export async function fetchUserRepositories(username) {
         hasMore = false;
       }
     }
+
+    console.info('[GitHub] fetchUserRepositories - total de repos obtidos:', repos.length);
 
     return repos.map(repo => ({
       name: repo.name,
@@ -418,9 +432,14 @@ export async function detectGitHubPages(owner, repo) {
     ];
     
     for (const url of possibleUrls) {
-      const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-      // Se não der erro, provavelmente existe
-      return url;
+      try {
+        await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+        console.debug('[GitHub] detectGitHubPages - detectada URL:', url);
+        // Se não der erro, provavelmente existe
+        return url;
+      } catch (e) {
+        console.debug('[GitHub] detectGitHubPages - tentativa falhou para', url);
+      }
     }
     
     return null;

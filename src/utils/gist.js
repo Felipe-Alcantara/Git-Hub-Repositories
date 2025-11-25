@@ -14,6 +14,7 @@ const GIST_FILENAME = 'github-projects-backup.json';
  */
 export async function syncToGist(projects, token, gistId = null) {
   if (!token) {
+    console.error('[Gist] syncToGist - token ausente');
     throw new Error('Token do GitHub é necessário para sincronizar');
   }
 
@@ -25,7 +26,7 @@ export async function syncToGist(projects, token, gistId = null) {
 
   // Validar tamanho do JSON
   const sizeInMB = (new Blob([content]).size / 1024 / 1024).toFixed(2);
-  console.log(`[Gist] Tamanho do backup: ${sizeInMB} MB`);
+  console.debug(`[Gist] syncToGist - Tamanho do backup calculado: ${sizeInMB} MB`);
   
   if (sizeInMB > 10) {
     throw new Error(`⚠️ Backup muito grande (${sizeInMB} MB). Limite do Gist: 10 MB. Considere reduzir o número de projetos ou usar Export/Import local.`);
@@ -46,7 +47,7 @@ export async function syncToGist(projects, token, gistId = null) {
     
     if (gistId) {
       // Atualizar Gist existente
-      console.log('[Gist] Atualizando Gist existente:', gistId);
+      console.info('[Gist] syncToGist - Atualizando Gist existente:', gistId);
       response = await fetch(`https://api.github.com/gists/${gistId}`, {
         method: 'PATCH',
         headers: {
@@ -57,7 +58,7 @@ export async function syncToGist(projects, token, gistId = null) {
       });
     } else {
       // Criar novo Gist
-      console.log('[Gist] Criando novo Gist');
+      console.info('[Gist] syncToGist - Criando novo Gist');
       response = await fetch('https://api.github.com/gists', {
         method: 'POST',
         headers: {
@@ -70,11 +71,12 @@ export async function syncToGist(projects, token, gistId = null) {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error('[Gist] syncToGist - resposta não OK:', response.status, error);
       throw new Error(error.message || `Erro ${response.status}: Falha ao sincronizar`);
     }
 
     const gist = await response.json();
-    console.log('[Gist] Sincronização bem-sucedida:', gist.id);
+    console.info('[Gist] syncToGist - Sincronização bem-sucedida:', gist.id);
     
     return {
       id: gist.id,
@@ -82,7 +84,7 @@ export async function syncToGist(projects, token, gistId = null) {
       updatedAt: gist.updated_at
     };
   } catch (error) {
-    console.error('[Gist] Erro ao sincronizar:', error);
+    console.error('[Gist] syncToGist - Erro ao sincronizar:', error);
     throw error;
   }
 }
@@ -99,7 +101,7 @@ export async function loadFromGist(gistId, token = null) {
   }
 
   try {
-    console.log('[Gist] Carregando dados do Gist:', gistId);
+    console.info('[Gist] loadFromGist - Carregando dados do Gist:', gistId);
     
     const headers = {
       'Content-Type': 'application/json',
@@ -115,6 +117,7 @@ export async function loadFromGist(gistId, token = null) {
 
     if (!response.ok) {
       if (response.status === 404) {
+        console.warn('[Gist] loadFromGist - Gist não encontrado (404):', gistId);
         throw new Error('Gist não encontrado. Verifique o ID.');
       }
       throw new Error(`Erro ${response.status}: Falha ao carregar Gist`);
@@ -130,7 +133,7 @@ export async function loadFromGist(gistId, token = null) {
 
     // Validar tamanho antes de fazer parse
     const sizeInMB = (new Blob([file.content]).size / 1024 / 1024).toFixed(2);
-    console.log(`[Gist] Tamanho do arquivo: ${sizeInMB} MB`);
+    console.debug(`[Gist] loadFromGist - Tamanho do arquivo: ${sizeInMB} MB`);
 
     let data;
     try {
@@ -140,7 +143,7 @@ export async function loadFromGist(gistId, token = null) {
       throw new Error(`❌ Backup corrompido (${sizeInMB} MB). O arquivo JSON está inválido. Tente usar Export/Import local ou crie um novo backup com menos projetos.`);
     }
     
-    console.log('[Gist] Dados carregados com sucesso:', {
+    console.info('[Gist] loadFromGist - Dados carregados com sucesso:', {
       projectsCount: data.projects?.length || 0,
       lastSync: data.lastSync
     });
@@ -151,7 +154,7 @@ export async function loadFromGist(gistId, token = null) {
       version: data.version
     };
   } catch (error) {
-    console.error('[Gist] Erro ao carregar:', error);
+    console.error('[Gist] loadFromGist - Erro ao carregar:', error);
     throw error;
   }
 }
@@ -196,7 +199,7 @@ export async function deleteGist(gistId, token) {
   }
 
   try {
-    console.log('[Gist] Deletando Gist:', gistId);
+    console.info('[Gist] deleteGist - Deletando Gist:', gistId);
     
     const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: 'DELETE',
@@ -211,12 +214,13 @@ export async function deleteGist(gistId, token) {
         throw new Error('Gist não encontrado. Pode já ter sido deletado.');
       }
       const error = await response.json();
+      console.error('[Gist] deleteGist - falha:', response.status, error);
       throw new Error(error.message || `Erro ${response.status}: Falha ao deletar Gist`);
     }
 
-    console.log('[Gist] ✅ Gist deletado com sucesso');
+    console.info('[Gist] deleteGist - ✅ Gist deletado com sucesso');
   } catch (error) {
-    console.error('[Gist] ❌ Erro ao deletar:', error);
+    console.error('[Gist] deleteGist - ❌ Erro ao deletar:', error);
     throw error;
   }
 }
@@ -225,6 +229,7 @@ export async function deleteGist(gistId, token) {
  * Salvar Gist ID no localStorage
  */
 export function saveGistId(gistId) {
+  console.debug('[Gist] saveGistId - salvando id do gist no localStorage:', gistId);
   localStorage.setItem('github_gist_id', gistId);
 }
 
@@ -232,12 +237,15 @@ export function saveGistId(gistId) {
  * Carregar Gist ID do localStorage
  */
 export function loadGistId() {
-  return localStorage.getItem('github_gist_id');
+  const v = localStorage.getItem('github_gist_id');
+  console.debug('[Gist] loadGistId - valor:', v);
+  return v;
 }
 
 /**
  * Remover Gist ID do localStorage
  */
 export function clearGistId() {
+  console.info('[Gist] clearGistId - removendo id do gist do localStorage');
   localStorage.removeItem('github_gist_id');
 }

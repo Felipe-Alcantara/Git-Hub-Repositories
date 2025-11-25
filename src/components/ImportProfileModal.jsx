@@ -33,6 +33,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
       return;
     }
 
+    console.debug('[ImportProfileModal] handleSearch - iniciando busca para:', username);
     setLoading(true);
     setError('');
     setRepositories([]);
@@ -52,6 +53,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
       for (const line of lines) {
         const extractedUsername = extractUsername(line);
         try {
+          console.debug('[ImportProfileModal] handleSearch - buscando repositórios para:', extractedUsername);
           const repos = await fetchUserRepositories(extractedUsername);
           if (repos.length > 0) {
             // marca o owner para cada repo para importar depois
@@ -71,6 +73,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
         return;
       }
 
+      console.info('[ImportProfileModal] handleSearch - total de repositórios encontrados:', allRepos.length);
       setRepositories(allRepos);
       if (errors.length > 0) {
         setError(errors.join('; '));
@@ -87,6 +90,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
   };
 
   const handleImportSelected = async () => {
+    console.debug('[ImportProfileModal] handleImportSelected - importando repositórios selecionados:', selectedRepos.length);
     setLoading(true);
     setError('');
 
@@ -106,7 +110,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
         if (existingUrls.has(repo.repoUrl)) {
           skippedCount++;
           skippedRepos.push(repo.name);
-          console.log(`⚠️ Repositório já existe, pulando: ${repo.name}`);
+            console.debug('[ImportProfileModal] handleImportSelected - pulando repo existente:', repo.name);
           continue;
         }
         
@@ -168,8 +172,9 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           },
         };
 
-        console.log(`[ImportProfile] Importando ${repo.name} - README: ${readme?.length || 0} caracteres`);
+        console.info(`[ImportProfile] Importando ${repo.name} - README: ${readme?.length || 0} caracteres`);
 
+        console.debug('[ImportProfileModal] handleImportSelected - chamando onImport para repo:', repo.name);
         await onImport(projectData);
         importedCount++;
         
@@ -193,6 +198,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           handleClose();
         }
       } else {
+        console.warn('[ImportProfileModal] handleImportSelected - nenhum repositório importado (todos duplicados)');
         setError('⚠️ Todos os repositórios selecionados já foram importados anteriormente.');
       }
     } catch (err) {
