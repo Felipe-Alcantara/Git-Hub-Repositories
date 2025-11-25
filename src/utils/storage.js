@@ -1,6 +1,3 @@
-import { get, set, del } from 'idb-keyval';
-import LZString from 'lz-string';
-
 const STORAGE_KEY = 'github_projects_dashboard';
 const CUSTOM_ORDER_KEY = 'github_projects_custom_order';
 const CUSTOM_GROUPS_KEY = 'github_projects_custom_groups';
@@ -43,47 +40,22 @@ export const createEmptyProject = () => ({
 });
 
 // Obter todos os projetos
-export const getProjects = async () => {
+export const getProjects = () => {
   try {
-    console.debug('[storage] getProjects: iniciando carregamento (IndexedDB)');
-    // Tenta carregar do IndexedDB primeiro
-    let data = await get(STORAGE_KEY);
-    let projects = [];
-
-    if (data) {
-      console.debug('[storage] getProjects: dados encontrados no IndexedDB (comprimento string):', (typeof data === 'string' ? data.length : undefined));
-      // Descomprime se necessário
-      if (typeof data === 'string' && data.startsWith('LZ')) {
-        data = LZString.decompressFromUTF16(data);
+    // Backward compatibility: migra chave antiga 'github-projects' para a chave nova
+    try {
+      const old = localStorage.getItem('github-projects');
+      const current = localStorage.getItem(STORAGE_KEY);
+      if (old && !current) {
+        localStorage.setItem(STORAGE_KEY, old);
+        localStorage.removeItem('github-projects');
+        console.log('[storage] Migrei dados de `github-projects` para `github_projects_dashboard`');
       }
-      projects = JSON.parse(data);
-    } else {
-      // Fallback para localStorage (migração)
-      try {
-        const old = localStorage.getItem('github-projects');
-        const current = localStorage.getItem(STORAGE_KEY);
-        if (old && !current) {
-          localStorage.setItem(STORAGE_KEY, old);
-          localStorage.removeItem('github-projects');
-          console.log('[storage] Migrei dados de `github-projects` para `github_projects_dashboard`');
-        }
-        const localData = localStorage.getItem(STORAGE_KEY);
-        if (localData) {
-          console.info('[storage] getProjects: dados encontrados no localStorage — migrando para IndexedDB');
-          projects = JSON.parse(localData);
-          // Migra para IndexedDB
-          try {
-            await saveProjects(projects);
-          } catch (err) {
-            console.warn('[storage] getProjects: falha ao migrar do localStorage para IndexedDB — mantendo em localStorage', err);
-          }
-          localStorage.removeItem(STORAGE_KEY);
-          console.log('[storage] Migrei dados do localStorage para IndexedDB');
-        }
-      } catch (e) {
-        console.warn('[storage] Falha na migração do localStorage:', e);
-      }
+    } catch (e) {
+      // ignore migration failure
     }
+    const data = localStorage.getItem(STORAGE_KEY);
+    const projects = data ? JSON.parse(data) : [];
     
     // Migração: adiciona campo 'group' em projetos antigos
     const migratedProjects = projects.map(project => ({
@@ -107,62 +79,30 @@ export const getProjects = async () => {
     
     // Salva de volta se houve mudanças
     if (projects.length > 0 && (projects.some(p => !p.group) || projects.some(p => !p.details?.sketches))) {
-      try {
-        await saveProjects(migratedProjects);
-      } catch (err) {
-        console.warn('[storage] getProjects: falha ao salvar projetos migrados', err);
-      }
+      saveProjects(migratedProjects);
     }
     
     return migratedProjects;
   } catch (error) {
-    console.error('[storage] getProjects: Erro ao carregar projetos:', error);
+    console.error('Erro ao carregar projetos:', error);
     return [];
   }
 };
 
 // Salvar todos os projetos
-export const saveProjects = async (projects) => {
+export const saveProjects = (projects) => {
   try {
-    const str = JSON.stringify(projects);
-    // Compressa com LZ-String para reduzir armazenamento
-    const compressed = LZString.compressToUTF16(str);
-    console.debug('[storage] saveProjects: attempting to save to IndexedDB — compressed length:', compressed.length);
-    await set(STORAGE_KEY, compressed);
-    console.info('[storage] saveProjects: salvo no IndexedDB com sucesso — items:', projects.length);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
     return true;
   } catch (error) {
-    // Tratar casos comuns
-    console.error('[storage] saveProjects: falha ao salvar no IndexedDB:', error);
-    // Se for QuotaExceededError ou semelhante, tentar fallback para localStorage (com log claro)
-    try {
-      if (error && (error.name === 'QuotaExceededError' || /quota/i.test(error.message || ''))) {
-        console.warn('[storage] saveProjects: quota excedida no IndexedDB — tentando fallback localStorage (pouco recomendado)');
-      }
-      // Tentar fallback — NÃO é garantido que localStorage funcione (pode também lançar QuotaExceededError)
-      const strFallback = JSON.stringify(projects);
-      localStorage.setItem(STORAGE_KEY, strFallback);
-      console.warn('[storage] saveProjects: fallback para localStorage realizado (atenção: localStorage tem limites menores)');
-      return true;
-    } catch (fallbackErr) {
-      console.error('[storage] saveProjects: fallback para localStorage falhou:', fallbackErr);
-      // Como último recurso, tentamos apagar chaves antigas e registrar erro para investigação
-      try {
-        await del(STORAGE_KEY);
-        localStorage.removeItem(STORAGE_KEY);
-        console.warn('[storage] saveProjects: limpei entradas de storage após falha crítica');
-      } catch (cleanupErr) {
-        console.error('[storage] saveProjects: falha ao limpar storage após erro:', cleanupErr);
-      }
-      return false;
-    }
+    console.error('Erro ao salvar projetos:', error);
+    return false;
   }
 };
 
 // Adicionar novo projeto
-export const addProject = async (project) => {
-  console.debug('[storage] addProject: adicionado/mesclando novo projeto (nome):', project?.name || '(sem nome)');
-  const projects = await getProjects();
+export const addProject = (project) => {
+  const projects = getProjects();
   const newProject = {
     ...createEmptyProject(),
     ...project,
@@ -171,15 +111,13 @@ export const addProject = async (project) => {
     lastModified: new Date().toISOString(),
   };
   projects.push(newProject);
-  const ok = await saveProjects(projects);
-  if (!ok) console.error('[storage] addProject: Falha ao persistir novo projeto (saveProjects retornou false)');
+  saveProjects(projects);
   return newProject;
 };
 
 // Atualizar projeto existente
-export const updateProject = async (id, updates) => {
-  console.debug('[storage] updateProject: atualizando projeto', id);
-  const projects = await getProjects();
+export const updateProject = (id, updates) => {
+  const projects = getProjects();
   const index = projects.findIndex(p => p.id === id);
   
   if (index === -1) return null;
@@ -190,30 +128,27 @@ export const updateProject = async (id, updates) => {
     lastModified: new Date().toISOString(),
   };
   
-  const ok = await saveProjects(projects);
-  if (!ok) console.error('[storage] updateProject: Falha ao persistir atualização do projeto', id);
+  saveProjects(projects);
   return projects[index];
 };
 
 // Deletar projeto
-export const deleteProject = async (id) => {
-  console.debug('[storage] deleteProject: removendo projeto', id);
-  const projects = await getProjects();
+export const deleteProject = (id) => {
+  const projects = getProjects();
   const filtered = projects.filter(p => p.id !== id);
-  const ok = await saveProjects(filtered);
-  if (!ok) console.error('[storage] deleteProject: Falha ao persistir remoção do projeto', id);
+  saveProjects(filtered);
   return filtered;
 };
 
 // Obter projeto por ID
-export const getProjectById = async (id) => {
-  const projects = await getProjects();
+export const getProjectById = (id) => {
+  const projects = getProjects();
   return projects.find(p => p.id === id);
 };
 
 // Exportar projetos para JSON
-export const exportProjects = async (projectIds = null) => {
-  const projects = await getProjects();
+export const exportProjects = (projectIds = null) => {
+  const projects = getProjects();
   const toExport = projectIds 
     ? projects.filter(p => projectIds.includes(p.id))
     : projects;
@@ -232,11 +167,11 @@ export const exportProjects = async (projectIds = null) => {
 };
 
 // Importar projetos de JSON
-export const importProjects = async (file) => {
+export const importProjects = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       try {
         const importedProjects = JSON.parse(e.target.result);
         
@@ -244,8 +179,7 @@ export const importProjects = async (file) => {
           throw new Error('Formato inválido: deve ser um array de projetos');
         }
         
-        console.debug('[storage] importProjects: carregando projetos atuais para comparação');
-        const currentProjects = await getProjects();
+        const currentProjects = getProjects();
         
         // Gerar novos IDs para evitar conflitos
         const processedProjects = importedProjects.map(project => ({
@@ -266,8 +200,7 @@ export const importProjects = async (file) => {
         });
 
         const mergedProjects = [...currentProjects, ...filteredToAdd];
-        const ok = await saveProjects(mergedProjects);
-        if (!ok) throw new Error('Falha ao salvar projetos importados');
+        saveProjects(mergedProjects);
         
         resolve({
           success: true,
@@ -279,7 +212,7 @@ export const importProjects = async (file) => {
       }
     };
     
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
     reader.readAsText(file);
   });
 };
@@ -290,7 +223,6 @@ export const getAllowDuplicates = () => {
     const v = localStorage.getItem(ALLOW_DUPLICATES_KEY);
     return v === 'true';
   } catch (e) {
-    console.error('[storage] getAllowDuplicates: falha ao ler configuração', e);
     return false;
   }
 };
@@ -300,25 +232,15 @@ export const setAllowDuplicates = (value) => {
     localStorage.setItem(ALLOW_DUPLICATES_KEY, value ? 'true' : 'false');
     return true;
   } catch (e) {
-    console.error('[storage] setAllowDuplicates: Erro ao salvar configuração de duplicatas:', e);
+    console.error('Erro ao salvar configuração de duplicatas:', e);
     return false;
   }
 };
 
 // Limpar todos os dados (útil para testes)
-export const clearAllProjects = async () => {
-  console.warn('[storage] clearAllProjects: limpando todos os dados de storage (IndexedDB + localStorage)');
-  try {
-    await del(STORAGE_KEY).catch(() => {});
-  } catch (e) {
-    console.warn('[storage] clearAllProjects: falha ao limpar chave IndexedDB', e);
-  }
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (e) {}
-  try {
-    localStorage.removeItem(CUSTOM_ORDER_KEY);
-  } catch (e) {}
+export const clearAllProjects = () => {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(CUSTOM_ORDER_KEY);
 };
 
 // Obter ordem customizada
@@ -444,46 +366,3 @@ export function deleteCustomGroup(groupName) {
   localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(newGroups));
   return true;
 }
-
-// Retorna informações sobre o estado do storage (uso, quota, persistência)
-export const getStorageHealth = async () => {
-  try {
-    if (!('storage' in navigator) || !navigator.storage.estimate) {
-      console.warn('[storage] getStorageHealth: navigator.storage.estimate não disponível neste ambiente');
-      return { supported: false };
-    }
-
-    const estimate = await navigator.storage.estimate();
-    const persisted = typeof navigator.storage.persisted === 'function' ? await navigator.storage.persisted() : false;
-
-    // tentar obter tamanho aproximado dos dados do app (comprimido)
-    let compressed = null;
-    try {
-      compressed = await get(STORAGE_KEY);
-    } catch (e) {
-      console.warn('[storage] getStorageHealth: falha ao ler chave do IndexedDB para estimativa de tamanho', e);
-    }
-
-    const compressedSize = compressed ? (typeof compressed === 'string' ? compressed.length : JSON.stringify(compressed).length) : 0;
-    // número de projetos aproximado
-    let projectsCount = 0;
-    try {
-      const projects = await getProjects();
-      projectsCount = Array.isArray(projects) ? projects.length : 0;
-    } catch (e) {
-      console.warn('[storage] getStorageHealth: falha ao contar projetos', e);
-    }
-
-    return {
-      supported: true,
-      usage: estimate.usage || 0,
-      quota: estimate.quota || 0,
-      persisted,
-      compressedSizeEstimate: compressedSize,
-      projectsCount,
-    };
-  } catch (error) {
-    console.error('[storage] getStorageHealth: Erro ao recuperar informações de storage:', error);
-    return { supported: false, error: String(error) };
-  }
-};

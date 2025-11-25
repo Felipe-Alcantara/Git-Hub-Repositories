@@ -3,13 +3,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Check, Undo, Settings, User, HelpCircle, Database } from 'lucide-react';
+import { Plus, Grid3x3, List, Columns, Search, SlidersHorizontal, Tag, X, Trash2, CheckSquare, Check, Undo, Settings, User, HelpCircle } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import ProjectCard from '../components/ProjectCard';
 import TutorialModal from '../components/TutorialModal';
 import NewProjectModal from '../components/NewProjectModal';
 import ImportExportButtons from '../components/ImportExportButtons';
-import StoragePanel from '../components/StoragePanel';
 import ImportProfileModal from '../components/ImportProfileModal';
 import GitHubTokenModal from '../components/GitHubTokenModal';
 import GistSyncModal from '../components/GistSyncModal';
@@ -44,7 +43,6 @@ export default function Home() {
   const [newGroupName, setNewGroupName] = useState(''); // Nome do novo grupo
   const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
   const [refreshKey, setRefreshKey] = useState(0); // Força re-render dos grupos
-  const [isStoragePanelOpen, setIsStoragePanelOpen] = useState(false);
 
   // Obter todas as tags usadas nos projetos
   const usedTags = useMemo(() => {
@@ -292,37 +290,35 @@ export default function Home() {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedProjects.length === 0) return;
     
     const count = selectedProjects.length;
     if (confirm(`Tem certeza que deseja deletar ${count} ${count === 1 ? 'projeto' : 'projetos'}?`)) {
-      for (const id of selectedProjects) {
-        await deleteProject(id);
-      }
+      selectedProjects.forEach(id => deleteProject(id));
       setSelectedProjects([]);
     }
   };
 
-  const handleCompleteSelected = async () => {
+  const handleCompleteSelected = () => {
     if (selectedProjects.length === 0) return;
 
     const count = selectedProjects.length;
     if (!confirm(`Marcar ${count} ${count === 1 ? 'projeto' : 'projetos'} como finalizado?`)) return;
 
-    for (const id of selectedProjects) {
+    selectedProjects.forEach(id => {
       const project = projects.find(p => p.id === id);
       if (project && !project.isCompleted) {
-        await updateProject(id, { isCompleted: true });
+        updateProject(id, { isCompleted: true });
       }
-    }
+    });
 
     // Limpar seleção após ação
     setSelectedProjects([]);
     setLastSelectedIndex(null);
   };
 
-  const handleUncompleteSelected = async () => {
+  const handleUncompleteSelected = () => {
     if (selectedProjects.length === 0) return;
 
     // Apenas agir se houver algum finalizado entre os selecionados
@@ -332,33 +328,33 @@ export default function Home() {
     const count = selectedProjects.length;
     if (!confirm(`Remover marcação de finalizado de ${count} ${count === 1 ? 'projeto' : 'projetos'}?`)) return;
 
-    for (const id of selectedProjects) {
+    selectedProjects.forEach(id => {
       const project = projects.find(p => p.id === id);
       if (project && project.isCompleted) {
-        await updateProject(id, { isCompleted: false });
+        updateProject(id, { isCompleted: false });
       }
-    }
+    });
 
     setSelectedProjects([]);
     setLastSelectedIndex(null);
   };
 
-  const handleSaveProject = async (projectData) => {
-    await addProject(projectData);
+  const handleSaveProject = (projectData) => {
+    addProject(projectData);
     setIsModalOpen(false);
   };
 
-  const handleBulkImport = async (importedProjects) => {
+  const handleBulkImport = (importedProjects) => {
     // Substituir todo o conjunto de projetos com os importados
     // usar a função utilitária saveProjects para garantir a mesma chave
-    await saveProjects(importedProjects);
+    saveProjects(importedProjects);
     // Recarregar a página para atualizar o estado
     window.location.reload();
   };
 
-  const handleDeleteProject = async (id) => {
+  const handleDeleteProject = (id) => {
     if (confirm('Tem certeza que deseja deletar este projeto?')) {
-      await deleteProject(id);
+      deleteProject(id);
       setSelectedProjects(prev => prev.filter(selectedId => selectedId !== id));
     }
   };
@@ -428,8 +424,8 @@ export default function Home() {
   };
 
   // Nova função para mover cards entre colunas Kanban
-  const handleCardMove = async (cardId, destinationGroup) => {
-    await updateProject(cardId, { group: destinationGroup });
+  const handleCardMove = (cardId, destinationGroup) => {
+    updateProject(cardId, { group: destinationGroup });
   };
 
   const handleImportComplete = () => {
@@ -580,13 +576,6 @@ export default function Home() {
                 >
                   <Settings className="w-5 h-5" />
                 </button>
-                <button
-                  onClick={() => setIsStoragePanelOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-700 hover:bg-amber-600 text-white rounded-lg transition-colors"
-                  title="Diagnóstico de armazenamento"
-                >
-                  <Database className="w-5 h-5" />
-                </button>
                 <ImportExportButtons onImportComplete={handleImportComplete} />
                 <button
                   onClick={() => setIsModalOpen(true)}
@@ -595,7 +584,6 @@ export default function Home() {
                   <Plus className="w-5 h-5" />
                   <span>Novo Projeto</span>
                 </button>
-                <StoragePanel isOpen={isStoragePanelOpen} onClose={() => setIsStoragePanelOpen(false)} />
                 <button
                   onClick={() => setIsProfileModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"

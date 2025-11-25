@@ -279,7 +279,7 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
       const updatedStructure = insertContent(newStructure);
 
       // Salva em localStorage para persistência e também atualizar contexto
-      await updateProject(project.id, { details: { ...project.details, structure: updatedStructure } });
+      updateProject(project.id, { details: { ...project.details, structure: updatedStructure } });
 
       // Mensagem para o chat
       setMessages(prev => [...prev, { id: Date.now(), type: 'ai', content: `✅ ${toFetch.length} arquivos carregados para análise pela IA.` }]);
@@ -734,7 +734,7 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
                     });
 
                     const updated = addContent(newStructure);
-                    await updateProject(project.id, { details: { ...project.details, structure: updated } });
+                    updateProject(project.id, { details: { ...project.details, structure: updated } });
 
                     setMessages(prev => [...prev, { id: Date.now(), type: 'ai', content: `✅ ${selectedFileIds.length} arquivo(s) carregado(s) para análise.` }]);
                     setSelectFilesModalOpen(false);
