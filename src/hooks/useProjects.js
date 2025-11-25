@@ -7,8 +7,8 @@ export function useProjects() {
 
   // Carregar projetos ao montar
   useEffect(() => {
-    const loadProjects = () => {
-      const loadedProjects = getProjects();
+    const loadProjects = async () => {
+      const loadedProjects = await getProjects();
       setProjects(loadedProjects);
       setLoading(false);
     };
@@ -17,15 +17,15 @@ export function useProjects() {
   }, []);
 
   // Adicionar novo projeto
-  const addProject = (projectData) => {
-    const newProject = addProjectToStorage(projectData);
+  const addProject = async (projectData) => {
+    const newProject = await addProjectToStorage(projectData);
     setProjects(prev => [...prev, newProject]);
     return newProject;
   };
 
   // Atualizar projeto
-  const updateProject = (id, updates) => {
-    const updated = updateProjectInStorage(id, updates);
+  const updateProject = async (id, updates) => {
+    const updated = await updateProjectInStorage(id, updates);
     if (updated) {
       setProjects(prev => prev.map(p => p.id === id ? updated : p));
     }
@@ -33,15 +33,15 @@ export function useProjects() {
   };
 
   // Deletar projeto
-  const deleteProject = (id) => {
-    const remaining = deleteProjectFromStorage(id);
+  const deleteProject = async (id) => {
+    const remaining = await deleteProjectFromStorage(id);
     setProjects(remaining);
   };
 
   // Reordenar projetos (para drag and drop)
-  const reorderProjects = (newOrder) => {
+  const reorderProjects = async (newOrder) => {
     setProjects(newOrder);
-    saveProjects(newOrder);
+    await saveProjects(newOrder);
   };
 
   return {

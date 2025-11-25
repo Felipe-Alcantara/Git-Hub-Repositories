@@ -60,17 +60,20 @@ export default function ProjectPage() {
   const [aiGenerateRequest, setAiGenerateRequest] = useState(null);
 
   useEffect(() => {
-    const loadedProject = getProjectById(id);
-    if (!loadedProject) {
-      navigate('/');
-      return;
-    }
-    setProject(loadedProject);
-    setEditedProject({ ...loadedProject });
+    const loadProject = async () => {
+      const loadedProject = await getProjectById(id);
+      if (!loadedProject) {
+        navigate('/');
+        return;
+      }
+      setProject(loadedProject);
+      setEditedProject({ ...loadedProject });
+    };
+    loadProject();
   }, [id, navigate]);
 
-  const handleSave = () => {
-    updateProject(id, editedProject);
+  const handleSave = async () => {
+    await updateProject(id, editedProject);
     setProject(editedProject);
     setIsEditing(false);
   };
@@ -230,13 +233,13 @@ export default function ProjectPage() {
     });
 
     // Debounce: salva após 1 segundo sem mudanças
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       console.log('[ProjectPage] Salvando automaticamente...', {
         projectId: id,
         projectName: editedProject.name,
         sketchesSize: editedProject.details.sketches?.length || 0
       });
-      updateProject(id, editedProject);
+      await updateProject(id, editedProject);
       setProject(editedProject);
       console.log('[ProjectPage] ✅ Projeto salvo com sucesso!');
     }, 1000);
@@ -271,10 +274,10 @@ export default function ProjectPage() {
     };
   }, []);
 
-  const toggleCompleted = () => {
+  const toggleCompleted = async () => {
     const updated = { ...editedProject, isCompleted: !editedProject.isCompleted };
     setEditedProject(updated);
-    updateProject(id, updated);
+    await updateProject(id, updated);
     setProject(updated);
   };
 
@@ -287,7 +290,7 @@ export default function ProjectPage() {
     setIsEditingLinks(true);
   };
 
-  const saveLinks = () => {
+  const saveLinks = async () => {
     const updated = {
       ...editedProject,
       repoUrl: editedLinks.repoUrl.trim(),
@@ -295,7 +298,7 @@ export default function ProjectPage() {
       downloadUrl: editedLinks.downloadUrl.trim()
     };
     setEditedProject(updated);
-    updateProject(id, updated);
+    await updateProject(id, updated);
     setProject(updated);
     setIsEditingLinks(false);
   };
