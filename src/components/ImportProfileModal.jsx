@@ -95,7 +95,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
     setError('');
 
     try {
-      const existingProjects = getProjects();
+      const existingProjects = await getProjects();
       const existingUrls = new Set(existingProjects.map(p => p.repoUrl));
       
       const reposToImport = selectedRepos.map(idx => repositories[idx]);

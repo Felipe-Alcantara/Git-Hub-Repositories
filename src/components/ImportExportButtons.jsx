@@ -5,9 +5,9 @@ import { useState } from 'react';
 export default function ImportExportButtons({ onImportComplete }) {
   const [importing, setImporting] = useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     console.debug('[ImportExportButtons] handleExport - iniciando export de projetos');
-    exportProjects();
+    await exportProjects();
     console.info('[ImportExportButtons] handleExport - gatilhou download dos projetos');
   };
 

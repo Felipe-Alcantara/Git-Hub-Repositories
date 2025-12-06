@@ -39,10 +39,37 @@ export default function Home() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
-  const [customOrder, setCustomOrder] = useState(() => getCustomOrder()); // Estado local da ordem
+  const [customOrder, setCustomOrder] = useState([]); // Estado local da ordem
   const [newGroupName, setNewGroupName] = useState(''); // Nome do novo grupo
   const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
   const [refreshKey, setRefreshKey] = useState(0); // Força re-render dos grupos
+  const [kanbanGroups, setKanbanGroups] = useState(['backlog', 'in-progress', 'completed']);
+
+  // Carregar customOrder
+  useEffect(() => {
+    getCustomOrder().then(setCustomOrder);
+  }, []);
+
+  // Carregar kanbanGroups
+  useEffect(() => {
+    const loadGroups = async () => {
+        const customGroups = await getCustomGroups();
+        const projectGroups = [...new Set(projects.map(p => p.group || ''))].filter(Boolean);
+        
+        // Identificar grupos que estão nos projetos mas não na ordem customizada
+        const newGroupsFound = projectGroups.filter(pg => !customGroups.includes(pg));
+        
+        if (newGroupsFound.length > 0) {
+          // Adicionar novos grupos encontrados ao final da lista de grupos customizados
+          const updatedGroups = [...customGroups, ...newGroupsFound];
+          await saveGroupsOrder(updatedGroups); // Salva a nova lista
+          setKanbanGroups(updatedGroups);
+        } else {
+            setKanbanGroups(customGroups.filter(Boolean));
+        }
+    };
+    loadGroups();
+  }, [projects, refreshKey]);
 
   // Obter todas as tags usadas nos projetos
   const usedTags = useMemo(() => {
@@ -122,23 +149,6 @@ export default function Home() {
   // Indicadores para os botões da seleção múltipla
   const hasCompletedSelected = selectedProjects.some(id => projects.find(p => p.id === id)?.isCompleted);
   const hasUncompletedSelected = selectedProjects.some(id => !projects.find(p => p.id === id)?.isCompleted);
-
-  const kanbanGroups = useMemo(() => {
-    const customGroups = getCustomGroups();
-    const projectGroups = [...new Set(projects.map(p => p.group || ''))].filter(Boolean);
-    
-    // Identificar grupos que estão nos projetos mas não na ordem customizada
-    const newGroupsFound = projectGroups.filter(pg => !customGroups.includes(pg));
-    
-    if (newGroupsFound.length > 0) {
-      // Adicionar novos grupos encontrados ao final da lista de grupos customizados
-      const updatedGroups = [...customGroups, ...newGroupsFound];
-      saveGroupsOrder(updatedGroups); // Salva a nova lista
-      return updatedGroups;
-    }
-    
-    return customGroups.filter(Boolean); // Retorna a lista customizada (já contém todos os grupos)
-  }, [projects, refreshKey]);
 
   // Filtrar e ordenar projetos
   const filteredProjects = useMemo(() => {
@@ -346,11 +356,11 @@ export default function Home() {
     setIsModalOpen(false);
   };
 
-  const handleBulkImport = (importedProjects) => {
+  const handleBulkImport = async (importedProjects) => {
     // Substituir todo o conjunto de projetos com os importados
     // usar a função utilitária saveProjects para garantir a mesma chave
     console.debug('[Home] handleBulkImport - salvando bulk import de', importedProjects?.length || 0, 'projetos');
-    saveProjects(importedProjects);
+    await saveProjects(importedProjects);
     // Recarregar a página para atualizar o estado
     window.location.reload();
   };
@@ -363,10 +373,10 @@ export default function Home() {
     }
   };
 
-  const handleCreateNewGroup = () => {
+  const handleCreateNewGroup = async () => {
     if (!newGroupName.trim()) return;
     
-    const success = addCustomGroup(newGroupName);
+    const success = await addCustomGroup(newGroupName);
     if (success) {
       setNewGroupName('');
       setShowNewGroupInput(false);
@@ -375,17 +385,17 @@ export default function Home() {
     }
   };
 
-  const handleDeleteGroup = (groupName) => {
+  const handleDeleteGroup = async (groupName) => {
     if (confirm(`Tem certeza que deseja deletar o grupo "${groupName}"?`)) {
-      const success = deleteCustomGroup(groupName);
+      const success = await deleteCustomGroup(groupName);
       if (success) {
         setRefreshKey(prev => prev + 1);
       }
     }
   };
 
-  const handleGroupReorder = (newGroupsOrder) => {
-    saveGroupsOrder(newGroupsOrder);
+  const handleGroupReorder = async (newGroupsOrder) => {
+    await saveGroupsOrder(newGroupsOrder);
     setRefreshKey(prev => prev + 1);
   };
 

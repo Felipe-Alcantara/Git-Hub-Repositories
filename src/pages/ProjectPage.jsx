@@ -60,19 +60,22 @@ export default function ProjectPage() {
   const [aiGenerateRequest, setAiGenerateRequest] = useState(null);
 
   useEffect(() => {
-    console.debug('[ProjectPage] carregar projeto - id:', id);
-    const loadedProject = getProjectById(id);
-    if (!loadedProject) {
-      navigate('/');
-      return;
-    }
-    setProject(loadedProject);
-    setEditedProject({ ...loadedProject });
+    const loadProject = async () => {
+      console.debug('[ProjectPage] carregar projeto - id:', id);
+      const loadedProject = await getProjectById(id);
+      if (!loadedProject) {
+        navigate('/');
+        return;
+      }
+      setProject(loadedProject);
+      setEditedProject({ ...loadedProject });
+    };
+    loadProject();
   }, [id, navigate]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.debug('[ProjectPage] handleSave - salvando projeto', id);
-    const updated = updateProject(id, editedProject);
+    const updated = await updateProject(id, editedProject);
     if (updated) {
       console.info('[ProjectPage] handleSave - salvo com sucesso:', id);
     } else {

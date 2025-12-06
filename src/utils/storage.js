@@ -1,3 +1,5 @@
+import { get, set, del, clear } from 'idb-keyval';
+
 const STORAGE_KEY = 'github_projects_dashboard';
 const CUSTOM_ORDER_KEY = 'github_projects_custom_order';
 const CUSTOM_GROUPS_KEY = 'github_projects_custom_groups';
@@ -7,20 +9,18 @@ const ALLOW_DUPLICATES_KEY = 'github_projects_allow_duplicates';
 export const createEmptyProject = () => ({
   id: crypto.randomUUID(),
   name: '',
-  createdAt: new Date().toISOString(), // Data de criação do card
-  repoCreatedAt: null, // Data de criação do repositório no GitHub
+  createdAt: new Date().toISOString(),
+  repoCreatedAt: null,
   description: '',
   languages: [],
   repoUrl: '',
   downloadUrl: '',
   webUrl: '',
   isCompleted: false,
-  complexity: 'simple', // simple, medium, complex, unfeasible
+  complexity: 'simple',
   linesOfCode: {},
-  
-  // Detalhes expandidos
   details: {
-    readme: '', // README do projeto
+    readme: '',
     ideas: '',
     improvements: '',
     problems: '',
@@ -29,41 +29,36 @@ export const createEmptyProject = () => ({
     mvp: '',
     stack: '',
     upgrades: '',
-    structure: null, // Estrutura de pastas/arquivos do projeto (array)
-    sketches: '', // Canvas de desenho salvo como base64
+    structure: null,
+    sketches: '',
   },
-  
-  // Metadados
-  group: 'backlog', // backlog, in-progress, completed, archived
+  group: 'backlog',
   tags: [],
   lastModified: new Date().toISOString(),
 });
 
 // Obter todos os projetos
-export const getProjects = () => {
+export const getProjects = async () => {
   try {
-    // Backward compatibility: migra chave antiga 'github-projects' para a chave nova
-    try {
-      const old = localStorage.getItem('github-projects');
-      const current = localStorage.getItem(STORAGE_KEY);
-      if (old && !current) {
-        localStorage.setItem(STORAGE_KEY, old);
-        localStorage.removeItem('github-projects');
-        console.log('[storage] Migrei dados de `github-projects` para `github_projects_dashboard`');
-      }
-    } catch (e) {
-      // ignore migration failure
+    // Migração do localStorage para IndexedDB na primeira execução
+    const localData = localStorage.getItem(STORAGE_KEY);
+    if (localData) {
+      console.log('[storage] Migrando dados do localStorage para IndexedDB...');
+      const projects = JSON.parse(localData);
+      await set(STORAGE_KEY, projects);
+      localStorage.removeItem(STORAGE_KEY);
+      console.log('[storage] Migração concluída.');
     }
-    const data = localStorage.getItem(STORAGE_KEY);
-    const projects = data ? JSON.parse(data) : [];
-    console.debug('[storage] getProjects - dados lidos do localStorage:', projects?.length || 0, 'projetos');
+
+    const projects = await get(STORAGE_KEY) || [];
+    console.debug('[storage] getProjects - dados lidos do IndexedDB:', projects?.length || 0, 'projetos');
     
-    // Migração: adiciona campo 'group' em projetos antigos
+    // Migração de estrutura de dados (se necessário)
     const migratedProjects = projects.map(project => ({
       ...project,
-      group: project.group || 'backlog', // Define 'backlog' como padrão se não existir
+      group: project.group || 'backlog',
       details: {
-        readme: '', // Adiciona campo readme se não existir
+        readme: '',
         ideas: '',
         improvements: '',
         problems: '',
@@ -72,19 +67,17 @@ export const getProjects = () => {
         mvp: '',
         stack: '',
         upgrades: '',
-        structure: null, // Adiciona campo de estrutura se não existir
-        sketches: '', // Adiciona campo de sketches se não existir
+        structure: null,
+        sketches: '',
         ...project.details,
       }
     }));
     
-    // Salva de volta se houve mudanças
     if (projects.length > 0 && (projects.some(p => !p.group) || projects.some(p => !p.details?.sketches))) {
       console.info('[storage] getProjects - detectei projeto(s) com formato antigo, executando migração e salvando');
-      saveProjects(migratedProjects);
+      await saveProjects(migratedProjects);
     }
     
-    console.debug('[storage] getProjects - retorno após migração:', migratedProjects.length, 'projetos');
     return migratedProjects;
   } catch (error) {
     console.error('Erro ao carregar projetos:', error);
@@ -93,10 +86,10 @@ export const getProjects = () => {
 };
 
 // Salvar todos os projetos
-export const saveProjects = (projects) => {
+export const saveProjects = async (projects) => {
   try {
     console.debug('[storage] saveProjects - salvando', projects?.length || 0, 'projetos');
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    await set(STORAGE_KEY, projects);
     console.info('[storage] saveProjects - salvou com sucesso');
     return true;
   } catch (error) {
@@ -106,8 +99,8 @@ export const saveProjects = (projects) => {
 };
 
 // Adicionar novo projeto
-export const addProject = (project) => {
-  const projects = getProjects();
+export const addProject = async (project) => {
+  const projects = await getProjects();
   const newProject = {
     ...createEmptyProject(),
     ...project,
@@ -117,14 +110,14 @@ export const addProject = (project) => {
   };
   console.debug('[storage] addProject - adicionando novo projeto:', newProject.name || '<sem nome>', newProject.id);
   projects.push(newProject);
-  const ok = saveProjects(projects);
+  const ok = await saveProjects(projects);
   if (!ok) console.error('[storage] addProject - falha ao salvar após adicionar projeto', newProject.id);
   return newProject;
 };
 
 // Atualizar projeto existente
-export const updateProject = (id, updates) => {
-  const projects = getProjects();
+export const updateProject = async (id, updates) => {
+  const projects = await getProjects();
   const index = projects.findIndex(p => p.id === id);
   
   if (index === -1) return null;
@@ -136,31 +129,31 @@ export const updateProject = (id, updates) => {
   };
   
   console.debug('[storage] updateProject - atualizando projeto', id, 'com', updates);
-  const ok = saveProjects(projects);
+  const ok = await saveProjects(projects);
   if (!ok) console.error('[storage] updateProject - falha ao salvar projeto atualizado', id);
   return projects[index];
 };
 
 // Deletar projeto
-export const deleteProject = (id) => {
-  const projects = getProjects();
+export const deleteProject = async (id) => {
+  const projects = await getProjects();
   const filtered = projects.filter(p => p.id !== id);
   console.debug('[storage] deleteProject - removendo projeto', id);
-  const ok = saveProjects(filtered);
+  const ok = await saveProjects(filtered);
   if (!ok) console.error('[storage] deleteProject - falha ao salvar após remover projeto', id);
   return filtered;
 };
 
 // Obter projeto por ID
-export const getProjectById = (id) => {
-  const projects = getProjects();
+export const getProjectById = async (id) => {
+  const projects = await getProjects();
   console.debug('[storage] getProjectById - buscando id:', id);
   return projects.find(p => p.id === id);
 };
 
 // Exportar projetos para JSON
-export const exportProjects = (projectIds = null) => {
-  const projects = getProjects();
+export const exportProjects = async (projectIds = null) => {
+  const projects = await getProjects();
   const toExport = projectIds 
     ? projects.filter(p => projectIds.includes(p.id))
     : projects;
@@ -184,7 +177,7 @@ export const importProjects = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const importedProjects = JSON.parse(e.target.result);
         
@@ -194,7 +187,7 @@ export const importProjects = (file) => {
         }
         
         console.info('[storage] importProjects - processando arquivo com', importedProjects.length, 'items');
-        const currentProjects = getProjects();
+        const currentProjects = await getProjects();
         
         // Gerar novos IDs para evitar conflitos
         const processedProjects = importedProjects.map((project, idx) => ({
@@ -207,7 +200,7 @@ export const importProjects = (file) => {
         const existingKeys = new Set(currentProjects.map(p => ((p.repoUrl || p.webUrl || p.name) || '').toString().trim().toLowerCase()));
 
         // Se estiver habilitado permitir duplicatas, tudo é importado sem filtragem
-        const allowDuplicates = localStorage.getItem(ALLOW_DUPLICATES_KEY) === 'true';
+        const allowDuplicates = await getAllowDuplicates();
         const filteredToAdd = allowDuplicates ? processedProjects : processedProjects.filter(p => {
           const key = ((p.repoUrl || p.webUrl || p.name) || '').toString().trim().toLowerCase();
           if (!key) return true; // projetos sem chave serão adicionados
@@ -215,7 +208,7 @@ export const importProjects = (file) => {
         });
         console.debug('[storage] importProjects - permitidas duplicatas?', allowDuplicates, '-> adicionando', filteredToAdd.length, 'projetos');
         const mergedProjects = [...currentProjects, ...filteredToAdd];
-        saveProjects(mergedProjects);
+        await saveProjects(mergedProjects);
         
         console.info('[storage] importProjects - import finalizado, itens importados:', filteredToAdd.length);
         resolve({
@@ -237,9 +230,16 @@ export const importProjects = (file) => {
 };
 
 // Permitir duplicatas ao importar (config)
-export const getAllowDuplicates = () => {
+export const getAllowDuplicates = async () => {
   try {
-    const v = localStorage.getItem(ALLOW_DUPLICATES_KEY);
+    // Migração
+    const localVal = localStorage.getItem(ALLOW_DUPLICATES_KEY);
+    if (localVal !== null) {
+        await set(ALLOW_DUPLICATES_KEY, localVal);
+        localStorage.removeItem(ALLOW_DUPLICATES_KEY);
+    }
+
+    const v = await get(ALLOW_DUPLICATES_KEY);
     console.debug('[storage] getAllowDuplicates - valor:', v);
     return v === 'true';
   } catch (e) {
@@ -247,10 +247,10 @@ export const getAllowDuplicates = () => {
   }
 };
 
-export const setAllowDuplicates = (value) => {
+export const setAllowDuplicates = async (value) => {
   try {
     console.debug('[storage] setAllowDuplicates - definindo para', value);
-    localStorage.setItem(ALLOW_DUPLICATES_KEY, value ? 'true' : 'false');
+    await set(ALLOW_DUPLICATES_KEY, value ? 'true' : 'false');
     return true;
   } catch (e) {
     console.error('[storage] setAllowDuplicates - Erro ao salvar configuração de duplicatas:', e);
@@ -259,18 +259,25 @@ export const setAllowDuplicates = (value) => {
 };
 
 // Limpar todos os dados (útil para testes)
-export const clearAllProjects = () => {
-  console.warn('[storage] clearAllProjects - removendo todas as chaves relacionadas a projetos do localStorage');
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(CUSTOM_ORDER_KEY);
+export const clearAllProjects = async () => {
+  console.warn('[storage] clearAllProjects - removendo todas as chaves relacionadas a projetos do IndexedDB');
+  await del(STORAGE_KEY);
+  await del(CUSTOM_ORDER_KEY);
 };
 
 // Obter ordem customizada
-export const getCustomOrder = () => {
+export const getCustomOrder = async () => {
   try {
-    const data = localStorage.getItem(CUSTOM_ORDER_KEY);
+    // Migração
+    const localData = localStorage.getItem(CUSTOM_ORDER_KEY);
+    if (localData) {
+        await set(CUSTOM_ORDER_KEY, JSON.parse(localData));
+        localStorage.removeItem(CUSTOM_ORDER_KEY);
+    }
+
+    const data = await get(CUSTOM_ORDER_KEY);
     console.debug('[storage] getCustomOrder - raw value:', data);
-    return data ? JSON.parse(data) : [];
+    return data || [];
   } catch (error) {
     console.error('[storage] getCustomOrder - Erro ao carregar ordem customizada:', error);
     return [];
@@ -278,10 +285,10 @@ export const getCustomOrder = () => {
 };
 
 // Salvar ordem customizada
-export const saveCustomOrder = (projectIds) => {
+export const saveCustomOrder = async (projectIds) => {
   try {
     console.debug('[storage] saveCustomOrder - salvando ordem personalizada (items):', projectIds?.length || 0);
-    localStorage.setItem(CUSTOM_ORDER_KEY, JSON.stringify(projectIds));
+    await set(CUSTOM_ORDER_KEY, projectIds);
     return true;
   } catch (error) {
     console.error('[storage] saveCustomOrder - Erro ao salvar ordem customizada:', error);
@@ -290,17 +297,23 @@ export const saveCustomOrder = (projectIds) => {
 };
 
 // Limpar ordem customizada
-export const clearCustomOrder = () => {
-  localStorage.removeItem(CUSTOM_ORDER_KEY);
+export const clearCustomOrder = async () => {
+  await del(CUSTOM_ORDER_KEY);
 };
 
 // ==================== GRUPOS CUSTOMIZADOS ====================
 
 // Obter grupos customizados
-export const getCustomGroups = () => {
+export const getCustomGroups = async () => {
   try {
-    const data = localStorage.getItem(CUSTOM_GROUPS_KEY);
-    const savedGroups = data ? JSON.parse(data) : [];
+    // Migração
+    const localData = localStorage.getItem(CUSTOM_GROUPS_KEY);
+    if (localData) {
+        await set(CUSTOM_GROUPS_KEY, JSON.parse(localData));
+        localStorage.removeItem(CUSTOM_GROUPS_KEY);
+    }
+
+    const savedGroups = await get(CUSTOM_GROUPS_KEY) || [];
     console.debug('[storage] getCustomGroups - grupos encontrados:', savedGroups);
     
     // Se não há dados salvos, retorna ordem padrão
@@ -327,10 +340,10 @@ export const getCustomGroups = () => {
 };
 
 // Adicionar grupo customizado
-export const addCustomGroup = (groupName) => {
+export const addCustomGroup = async (groupName) => {
   try {
     console.debug('[storage] addCustomGroup - tentando adicionar grupo:', groupName);
-    const groups = getCustomGroups();
+    const groups = await getCustomGroups();
     const normalizedName = groupName.toLowerCase().trim().replace(/\s+/g, '-');
     
     if (!normalizedName || groups.includes(normalizedName)) {
@@ -338,7 +351,7 @@ export const addCustomGroup = (groupName) => {
     }
     
     groups.push(normalizedName);
-    localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(groups));
+    await set(CUSTOM_GROUPS_KEY, groups);
     console.info('[storage] addCustomGroup - grupo adicionado:', normalizedName);
     return true;
   } catch (error) {
@@ -348,10 +361,10 @@ export const addCustomGroup = (groupName) => {
 };
 
 // Remover grupo customizado
-export const removeCustomGroup = (groupName) => {
+export const removeCustomGroup = async (groupName) => {
   try {
     console.debug('[storage] removeCustomGroup - removendo grupo:', groupName);
-    const groups = getCustomGroups();
+    const groups = await getCustomGroups();
     const defaultGroups = ['backlog', 'in-progress', 'completed'];
     
     // Não permite remover grupos padrão
@@ -360,7 +373,7 @@ export const removeCustomGroup = (groupName) => {
     }
     
     const filtered = groups.filter(g => g !== groupName);
-    localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(filtered));
+    await set(CUSTOM_GROUPS_KEY, filtered);
     console.info('[storage] removeCustomGroup - grupo removido:', groupName);
     return true;
   } catch (error) {
@@ -370,16 +383,16 @@ export const removeCustomGroup = (groupName) => {
 };
 
 // Limpar grupos customizados
-export const clearCustomGroups = () => {
-  console.warn('[storage] clearCustomGroups - limpando grupos customizados do localStorage');
-  localStorage.removeItem(CUSTOM_GROUPS_KEY);
+export const clearCustomGroups = async () => {
+  console.warn('[storage] clearCustomGroups - limpando grupos customizados do IndexedDB');
+  await del(CUSTOM_GROUPS_KEY);
 };
 
 // Salvar ordem customizada dos grupos
-export const saveGroupsOrder = (orderedGroups) => {
+export const saveGroupsOrder = async (orderedGroups) => {
   try {
     console.debug('[storage] saveGroupsOrder - salvando ordem de grupos:', orderedGroups);
-    localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(orderedGroups));
+    await set(CUSTOM_GROUPS_KEY, orderedGroups);
     return true;
   } catch (error) {
     console.error('[storage] saveGroupsOrder - Erro ao salvar ordem dos grupos:', error);
@@ -387,13 +400,13 @@ export const saveGroupsOrder = (orderedGroups) => {
   }
 };
 
-export function deleteCustomGroup(groupName) {
-  const currentGroups = getCustomGroups();
+export async function deleteCustomGroup(groupName) {
+  const currentGroups = await getCustomGroups();
   if (!currentGroups.includes(groupName)) {
     console.warn(`Tentativa de deletar um grupo que não existe: ${groupName}`);
     return false;
   }
   const newGroups = currentGroups.filter(g => g !== groupName);
-  localStorage.setItem(CUSTOM_GROUPS_KEY, JSON.stringify(newGroups));
+  await set(CUSTOM_GROUPS_KEY, newGroups);
   return true;
 }

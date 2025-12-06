@@ -25,12 +25,12 @@ export default function NewProjectModal({ isOpen, onClose, onSave }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Verifica se já existe um projeto com a mesma URL
     if (formData.repoUrl) {
-      const existingProjects = getProjects();
+      const existingProjects = await getProjects();
       const duplicate = existingProjects.find(p => p.repoUrl === formData.repoUrl);
       
       if (duplicate) {
