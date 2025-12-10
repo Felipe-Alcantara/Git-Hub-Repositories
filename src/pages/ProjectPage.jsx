@@ -1,8 +1,8 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles, Copy, Check } from 'lucide-react';
-import { getProjectById, updateProject } from '../utils/storage';
+import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles, Copy, Check, Plus } from 'lucide-react';
+import { getProjectById, updateProject, getCustomGroups, addCustomGroup } from '../utils/storage';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
@@ -58,6 +58,18 @@ export default function ProjectPage() {
   const [isResizingRight, setIsResizingRight] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState(null);
   const [aiGenerateRequest, setAiGenerateRequest] = useState(null);
+  const [availableGroups, setAvailableGroups] = useState(['backlog', 'in-progress', 'completed']);
+  const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+
+  // Carrega os grupos disponíveis
+  useEffect(() => {
+    const loadGroups = async () => {
+      const groups = await getCustomGroups();
+      setAvailableGroups(groups);
+    };
+    loadGroups();
+  }, []);
 
   useEffect(() => {
     const loadProject = async () => {
@@ -483,28 +495,74 @@ export default function ProjectPage() {
                 <div>
                   <div className="text-gray-400 text-sm mb-2">Grupo Kanban</div>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedProject.group || 'backlog'}
-                      onChange={(e) => handleBasicChange('group', e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
-                      placeholder="backlog, in-progress, completed..."
-                      list="group-suggestions-edit"
-                    />
+                    <div className="space-y-2">
+                      {isCreatingNewGroup ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newGroupName}
+                            onChange={(e) => setNewGroupName(e.target.value)}
+                            className="flex-1 px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
+                            placeholder="Nome do novo grupo..."
+                            autoFocus
+                          />
+                          <button
+                            onClick={async () => {
+                              if (newGroupName.trim()) {
+                                const normalizedName = newGroupName.toLowerCase().trim().replace(/\s+/g, '-');
+                                const added = await addCustomGroup(normalizedName);
+                                if (added) {
+                                  setAvailableGroups(prev => [...prev, normalizedName]);
+                                }
+                                handleBasicChange('group', normalizedName);
+                                setNewGroupName('');
+                                setIsCreatingNewGroup(false);
+                              }
+                            }}
+                            className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setNewGroupName('');
+                              setIsCreatingNewGroup(false);
+                            }}
+                            className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <select
+                            value={editedProject.group || 'backlog'}
+                            onChange={(e) => handleBasicChange('group', e.target.value)}
+                            className="flex-1 px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
+                          >
+                            {availableGroups.map((group) => (
+                              <option key={group} value={group}>
+                                {group.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setIsCreatingNewGroup(true)}
+                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center gap-1"
+                            title="Criar novo grupo"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <span className="inline-block px-3 py-1 bg-green-500/10 text-green-400 text-sm rounded-full border border-green-500/30">
                       {(project.group || 'backlog').split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                     </span>
                   )}
-                  <datalist id="group-suggestions-edit">
-                    <option value="backlog" />
-                    <option value="in-progress" />
-                    <option value="completed" />
-                    <option value="archived" />
-                    <option value="on-hold" />
-                    <option value="review" />
-                  </datalist>
                 </div>
+
 
                 {/* Descrição */}
                 <div>
