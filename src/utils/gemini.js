@@ -76,12 +76,40 @@ export function collectFilesPreview(project, maxTotalChars = 6000, perFileChars 
   return result;
 }
 
+// Cache para evitar chamadas repetidas de listagem de modelos
+let cachedModelName = null;
+let cachedModelKey = null;
+const GEMINI_MODEL_CACHE_KEY = 'gemini-cached-model-v2';
+
 /**
  * Obter o modelo Gemini disponível para uso
  * @param {string} apiKey - API key do Gemini
  * @returns {Promise<string>} - Nome do modelo disponível
  */
 async function getAvailableGeminiModel(apiKey) {
+  // 1. Verificar cache em memória
+  if (cachedModelName && cachedModelKey === apiKey) {
+    return cachedModelName;
+  }
+
+  // 2. Verificar cache persistente (localStorage)
+  try {
+    const cached = localStorage.getItem(GEMINI_MODEL_CACHE_KEY);
+    if (cached) {
+      const { key, model, timestamp } = JSON.parse(cached);
+      // Cache válido por 24h e se a chave for a mesma
+      if (key === apiKey && (Date.now() - timestamp < 24 * 60 * 60 * 1000)) {
+        console.log(`[Gemini] Usando modelo do cache persistente: ${model}`);
+        // Atualizar cache em memória
+        cachedModelName = model;
+        cachedModelKey = apiKey;
+        return model;
+      }
+    }
+  } catch (e) {
+    console.warn('[Gemini] Erro ao ler cache de modelo:', e);
+  }
+
   try {
     console.log('[Gemini] Buscando modelos disponíveis...');
     const response = await fetch(
@@ -96,6 +124,7 @@ async function getAvailableGeminiModel(apiKey) {
 
     if (!response.ok) {
       console.log('[Gemini] Falha ao listar modelos, usando fallback');
+      // Se falhar, não cacheamos para tentar novamente depois
       return 'gemini-1.5-pro'; // Fallback
     }
 
@@ -113,34 +142,53 @@ async function getAvailableGeminiModel(apiKey) {
 
     console.log('[Gemini] Modelos filtrados:', geminiModels.map(m => m.name));
 
+    let selectedModel = 'gemini-1.5-pro';
+
     if (geminiModels.length === 0) {
       console.log('[Gemini] Nenhum modelo estável encontrado, usando fallback');
-      return 'gemini-1.5-pro';
-    }
+    } else {
+      // Preferir modelos na ordem: 2.5-flash, 1.5-pro, 1.0-pro, 2.0-flash, flash-latest, pro-latest
+      const preferredOrder = [
+        'gemini-2.5-flash',
+        'gemini-1.5-pro',
+        'gemini-1.0-pro',
+        'gemini-2.0-flash',
+        'gemini-flash-latest',
+        'gemini-pro-latest',
+        'gemini-2.0-flash-lite'
+      ];
 
-    // Preferir modelos na ordem: 1.5-pro, 1.0-pro, 2.0-flash, flash-latest, pro-latest
-    const preferredOrder = [
-      'gemini-1.5-pro',
-      'gemini-1.0-pro',
-      'gemini-2.0-flash',
-      'gemini-flash-latest',
-      'gemini-pro-latest',
-      'gemini-2.0-flash-lite'
-    ];
+      const preferredModel = preferredOrder.find(preferred => 
+        geminiModels.some(m => m.name?.endsWith(`/${preferred}`))
+      );
 
-    for (const preferred of preferredOrder) {
-      const model = geminiModels.find(m => m.name?.endsWith(`/${preferred}`));
-      if (model) {
-        const modelName = model.name.split('/').pop();
-        console.log(`[Gemini] Usando modelo preferido: ${modelName}`);
-        return modelName;
+      if (preferredModel) {
+        const model = geminiModels.find(m => m.name?.endsWith(`/${preferredModel}`));
+        selectedModel = model.name.split('/').pop();
+        console.log(`[Gemini] Usando modelo preferido: ${selectedModel}`);
+      } else {
+        // Usar o primeiro disponível
+        selectedModel = geminiModels[0].name.split('/').pop();
+        console.log(`[Gemini] Usando primeiro modelo disponível: ${selectedModel}`);
       }
     }
 
-    // Usar o primeiro disponível
-    const modelName = geminiModels[0].name.split('/').pop();
-    console.log(`[Gemini] Usando primeiro modelo disponível: ${modelName}`);
-    return modelName;
+    // Salvar no cache em memória
+    cachedModelName = selectedModel;
+    cachedModelKey = apiKey;
+
+    // Salvar no cache persistente
+    try {
+      localStorage.setItem(GEMINI_MODEL_CACHE_KEY, JSON.stringify({
+        key: apiKey,
+        model: selectedModel,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.warn('[Gemini] Erro ao salvar cache de modelo:', e);
+    }
+    
+    return selectedModel;
 
   } catch (error) {
     console.error('[Gemini] Erro ao buscar modelos:', error);
@@ -525,7 +573,9 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
 
       // Se é erro 429 e não é a última tentativa, aguardar e tentar novamente
       if (attempt < maxRetries) {
-        const delayMs = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s, 8s
+        // Aumentado o tempo de espera para lidar melhor com rate limits
+        // 2s, 4s, 8s -> 4s, 8s, 16s
+        const delayMs = Math.pow(2, attempt) * 2000; 
         console.log(`[Gemini] Rate limit atingido, aguardando ${delayMs}ms antes da próxima tentativa...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         continue;
@@ -539,7 +589,7 @@ async function fetchWithRetry(url, options, maxRetries = 3) {
       console.error(`[Gemini] Erro na tentativa ${attempt}:`, error);
 
       if (attempt < maxRetries) {
-        const delayMs = Math.pow(2, attempt) * 1000;
+        const delayMs = Math.pow(2, attempt) * 2000;
         console.log(`[Gemini] Aguardando ${delayMs}ms antes da próxima tentativa...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
@@ -593,6 +643,43 @@ export async function verifyGeminiApiKey(apiKey) {
     // Se conseguimos listar os modelos com sucesso, a API key é válida
     // Isso evita rate limiting ao fazer uma segunda requisição de teste
     console.log('[Gemini] API key válida - conseguiu listar modelos');
+
+    // OTIMIZAÇÃO: Salvar o modelo no cache para evitar nova requisição
+    try {
+      const preferredOrder = [
+        'gemini-2.5-flash',
+        'gemini-1.5-pro',
+        'gemini-1.0-pro',
+        'gemini-2.0-flash',
+        'gemini-flash-latest',
+        'gemini-pro-latest',
+        'gemini-2.0-flash-lite'
+      ];
+
+      let selectedModel = geminiModels[0].name.split('/').pop();
+      
+      const preferredModel = preferredOrder.find(preferred => 
+        geminiModels.some(m => m.name?.endsWith(`/${preferred}`))
+      );
+
+      if (preferredModel) {
+        const model = geminiModels.find(m => m.name?.endsWith(`/${preferredModel}`));
+        selectedModel = model.name.split('/').pop();
+      }
+      
+      // Atualizar variáveis globais e localStorage
+      cachedModelName = selectedModel;
+      cachedModelKey = apiKey;
+      localStorage.setItem(GEMINI_MODEL_CACHE_KEY, JSON.stringify({
+        key: apiKey,
+        model: selectedModel,
+        timestamp: Date.now()
+      }));
+      console.log(`[Gemini] Cache atualizado durante verificação: ${selectedModel}`);
+    } catch (e) {
+      console.warn('[Gemini] Erro ao salvar cache de modelo na verificação:', e);
+    }
+
     return true;
 
   } catch (error) {
