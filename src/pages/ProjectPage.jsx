@@ -392,7 +392,13 @@ export default function ProjectPage() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowAIModal(true)}
+                onClick={() => {
+                  if (showAIModal) {
+                    setAiGenerateRequest('initial_explanation');
+                  } else {
+                    setShowAIModal(true);
+                  }
+                }}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-colors"
                 title="Explicar projeto com IA"
               >

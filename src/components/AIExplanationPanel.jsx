@@ -181,6 +181,13 @@ export default function AIExplanationPanel({ visible, onClose, project, activeSe
   useEffect(() => {
     if (!generateSectionRequest) return;
 
+    // Se for solicitação de explicação inicial (botão do header)
+    if (generateSectionRequest === 'initial_explanation') {
+      generateInitialExplanation();
+      if (onGenerateHandled) onGenerateHandled();
+      return;
+    }
+
     // Só processar se a aba solicitada for a mesma que está ativa no painel
     if (generateSectionRequest !== activeSection) {
       // Delega ao usuário — definimos a aba ativa no ProjectPage, então apenas aguarde.
