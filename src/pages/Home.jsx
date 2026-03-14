@@ -16,6 +16,10 @@ import { getAllTags } from '../utils/tags';
 import { saveProjects } from '../utils/storage';
 import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
+const VIEW_MODE_STORAGE_KEY = 'homeViewMode';
+const DEFAULT_VIEW_MODE = 'grid';
+const VALID_VIEW_MODES = new Set(['grid', 'list', 'kanban']);
+
 export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,7 +31,14 @@ export default function Home() {
   const [balloonPos, setBalloonPos] = useState({ vertical: 'top', left: 0, top: 0, arrowLeft: 0 });
   const helpButtonRef = useRef(null);
   const balloonRef = useRef(null);
-  const [viewMode, setViewMode] = useState('grid'); // grid, list, kanban
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      return VALID_VIEW_MODES.has(saved) ? saved : DEFAULT_VIEW_MODE;
+    } catch {
+      return DEFAULT_VIEW_MODE;
+    }
+  }); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
   const [searchTerm, setSearchTerm] = useState('');
   const [filterComplexity, setFilterComplexity] = useState('all');
@@ -44,6 +55,14 @@ export default function Home() {
   const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
   const [refreshKey, setRefreshKey] = useState(0); // Força re-render dos grupos
   const [kanbanGroups, setKanbanGroups] = useState(['backlog', 'in-progress', 'completed']);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    } catch {
+      // localStorage pode falhar em ambientes restritos; ignorar
+    }
+  }, [viewMode]);
 
   // Carregar customOrder
   useEffect(() => {
