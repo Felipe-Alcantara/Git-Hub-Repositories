@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import ImportProfileModal from '../ImportProfileModal';
 import * as githubUtils from '../../utils/github';
 import * as storageUtils from '../../utils/storage';
@@ -41,7 +42,6 @@ describe('ImportProfileModal - Detecção de Atualizações', () => {
   });
 
   it('deve exibir badge "Atualizado" em repositórios com atualizações', async () => {
-    // Mock de repositórios retornados do GitHub
     const mockRepos = [
       {
         name: 'repo1',
@@ -67,20 +67,28 @@ describe('ImportProfileModal - Detecção de Atualizações', () => {
 
     githubUtils.fetchUserRepositories.mockResolvedValue(mockRepos);
 
-    render(
-      <ImportProfileModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onImport={mockOnImport}
-        onOpenToken={mockOnOpenToken}
-      />
-    );
+    await act(async () => {
+      render(
+        <ImportProfileModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onImport={mockOnImport}
+          onOpenToken={mockOnOpenToken}
+        />
+      );
+    });
 
     const input = screen.getByPlaceholderText(/Ex: Felipe-Alcantara/i);
-    await userEvent.type(input, 'testuser');
+    
+    await act(async () => {
+      await userEvent.type(input, 'testuser');
+    });
 
     const searchButton = screen.getByRole('button', { name: /Buscar/i });
-    await userEvent.click(searchButton);
+    
+    await act(async () => {
+      await userEvent.click(searchButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('repo1')).toBeInTheDocument();
@@ -130,20 +138,28 @@ describe('ImportProfileModal - Detecção de Atualizações', () => {
 
     githubUtils.fetchUserRepositories.mockResolvedValue(mockRepos);
 
-    render(
-      <ImportProfileModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onImport={mockOnImport}
-        onOpenToken={mockOnOpenToken}
-      />
-    );
+    await act(async () => {
+      render(
+        <ImportProfileModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onImport={mockOnImport}
+          onOpenToken={mockOnOpenToken}
+        />
+      );
+    });
 
     const input = screen.getByPlaceholderText(/Ex: Felipe-Alcantara/i);
-    await userEvent.type(input, 'testuser');
+    
+    await act(async () => {
+      await userEvent.type(input, 'testuser');
+    });
 
     const searchButton = screen.getByRole('button', { name: /Buscar/i });
-    await userEvent.click(searchButton);
+    
+    await act(async () => {
+      await userEvent.click(searchButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('repo1')).toBeInTheDocument();
@@ -173,27 +189,38 @@ describe('ImportProfileModal - Detecção de Atualizações', () => {
     githubUtils.fetchGitHubLanguages.mockResolvedValue({ JavaScript: 50000 });
     githubUtils.fetchGitHubReadme.mockResolvedValue('# README atualizado');
 
-    render(
-      <ImportProfileModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onImport={mockOnImport}
-        onOpenToken={mockOnOpenToken}
-      />
-    );
+    await act(async () => {
+      render(
+        <ImportProfileModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onImport={mockOnImport}
+          onOpenToken={mockOnOpenToken}
+        />
+      );
+    });
 
     const input = screen.getByPlaceholderText(/Ex: Felipe-Alcantara/i);
-    await userEvent.type(input, 'testuser');
+    
+    await act(async () => {
+      await userEvent.type(input, 'testuser');
+    });
 
     const searchButton = screen.getByRole('button', { name: /Buscar/i });
-    await userEvent.click(searchButton);
+    
+    await act(async () => {
+      await userEvent.click(searchButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('repo1')).toBeInTheDocument();
     });
 
     const importButton = screen.getByRole('button', { name: /Importar/i });
-    await userEvent.click(importButton);
+    
+    await act(async () => {
+      await userEvent.click(importButton);
+    });
 
     await waitFor(() => {
       expect(mockOnImport).toHaveBeenCalled();
@@ -233,20 +260,28 @@ describe('ImportProfileModal - Detecção de Atualizações', () => {
 
     githubUtils.fetchUserRepositories.mockResolvedValue(mockRepos);
 
-    render(
-      <ImportProfileModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onImport={mockOnImport}
-        onOpenToken={mockOnOpenToken}
-      />
-    );
+    await act(async () => {
+      render(
+        <ImportProfileModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onImport={mockOnImport}
+          onOpenToken={mockOnOpenToken}
+        />
+      );
+    });
 
     const input = screen.getByPlaceholderText(/Ex: Felipe-Alcantara/i);
-    await userEvent.type(input, 'testuser');
+    
+    await act(async () => {
+      await userEvent.type(input, 'testuser');
+    });
 
     const searchButton = screen.getByRole('button', { name: /Buscar/i });
-    await userEvent.click(searchButton);
+    
+    await act(async () => {
+      await userEvent.click(searchButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/2 repositório\(s\) com atualizações detectadas/i)).toBeInTheDocument();
@@ -272,27 +307,38 @@ describe('ImportProfileModal - Detecção de Atualizações', () => {
     githubUtils.fetchGitHubLanguages.mockResolvedValue({ JavaScript: 50000 });
     githubUtils.fetchGitHubReadme.mockResolvedValue('# README');
 
-    render(
-      <ImportProfileModal
-        isOpen={true}
-        onClose={mockOnClose}
-        onImport={mockOnImport}
-        onOpenToken={mockOnOpenToken}
-      />
-    );
+    await act(async () => {
+      render(
+        <ImportProfileModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onImport={mockOnImport}
+          onOpenToken={mockOnOpenToken}
+        />
+      );
+    });
 
     const input = screen.getByPlaceholderText(/Ex: Felipe-Alcantara/i);
-    await userEvent.type(input, 'testuser');
+    
+    await act(async () => {
+      await userEvent.type(input, 'testuser');
+    });
 
     const searchButton = screen.getByRole('button', { name: /Buscar/i });
-    await userEvent.click(searchButton);
+    
+    await act(async () => {
+      await userEvent.click(searchButton);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('repo1')).toBeInTheDocument();
     });
 
     const importButton = screen.getByRole('button', { name: /Importar/i });
-    await userEvent.click(importButton);
+    
+    await act(async () => {
+      await userEvent.click(importButton);
+    });
 
     await waitFor(() => {
       expect(mockOnImport).toHaveBeenCalled();
