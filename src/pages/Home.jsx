@@ -349,10 +349,18 @@ export default function Home() {
     setLastSelectedIndex(null);
   };
 
-  const handleSaveProject = (projectData) => {
-    console.debug('[Home] handleSaveProject - adicionando novo projeto:', projectData?.name || '<sem nome>');
-    const created = addProject(projectData);
-    console.info('[Home] handleSaveProject - projeto criado com id:', created?.id);
+  const handleSaveProject = async (projectData, existingId = null) => {
+    if (existingId) {
+      // Atualizar projeto existente
+      console.debug('[Home] handleSaveProject - atualizando projeto existente:', existingId);
+      await updateProject(existingId, projectData);
+      console.info('[Home] handleSaveProject - projeto atualizado:', existingId);
+    } else {
+      // Criar novo projeto
+      console.debug('[Home] handleSaveProject - adicionando novo projeto:', projectData?.name || '<sem nome>');
+      const created = await addProject(projectData);
+      console.info('[Home] handleSaveProject - projeto criado com id:', created?.id);
+    }
     setIsModalOpen(false);
   };
 

@@ -12,6 +12,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
   const [rateLimit, setRateLimit] = useState(null);
   const [repositories, setRepositories] = useState([]);
   const [selectedRepos, setSelectedRepos] = useState([]);
+  const [updatedRepos, setUpdatedRepos] = useState(new Set());
 
   // Extrai o nome de usuário de uma URL do GitHub ou retorna o nome diretamente
   const extractUsername = (input) => {
@@ -38,6 +39,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
     setError('');
     setRepositories([]);
     setSelectedRepos([]);
+    setUpdatedRepos(new Set());
 
     try {
       // Permite múltiplos perfis - cada perfil em uma linha
@@ -49,6 +51,14 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
 
       const allRepos = [];
       const errors = [];
+
+      // Busca projetos existentes para comparar datas
+      const existingProjects = await getProjects();
+      const existingReposMap = new Map(
+        existingProjects
+          .filter(p => p.repoUrl)
+          .map(p => [p.repoUrl, p])
+      );
 
       for (const line of lines) {
         const extractedUsername = extractUsername(line);
@@ -73,13 +83,45 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
         return;
       }
 
+      // Identifica repositórios que foram atualizados
+      const updated = new Set();
+      allRepos.forEach((repo, idx) => {
+        const existing = existingReposMap.get(repo.repoUrl);
+        if (existing) {
+          const existingDate = new Date(existing.repoUpdatedAt || existing.updatedAt || 0);
+          const newDate = new Date(repo.updatedAt);
+          if (newDate > existingDate) {
+            updated.add(idx);
+            console.info('[ImportProfileModal] Repositório atualizado detectado:', repo.name, 
+              'Existente:', existingDate.toISOString(), 'Novo:', newDate.toISOString());
+          }
+        }
+      });
+
       console.info('[ImportProfileModal] handleSearch - total de repositórios encontrados:', allRepos.length);
+      console.info('[ImportProfileModal] handleSearch - repositórios com atualizações:', updated.size);
+      
       setRepositories(allRepos);
+      setUpdatedRepos(updated);
+      
       if (errors.length > 0) {
         setError(errors.join('; '));
       }
-      // Seleciona todos por padrão
-      setSelectedRepos(allRepos.map((_, idx) => idx));
+      
+      // Seleciona apenas os novos e atualizados por padrão
+      const toSelect = allRepos
+        .map((repo, idx) => {
+          const isNew = !existingReposMap.has(repo.repoUrl);
+          const isUpdated = updated.has(idx);
+          return (isNew || isUpdated) ? idx : null;
+        })
+        .filter(idx => idx !== null);
+      
+      setSelectedRepos(toSelect.length > 0 ? toSelect : allRepos.map((_, idx) => idx));
+      
+      if (updated.size > 0) {
+        setError(`✨ ${updated.size} repositório(s) com atualizações detectadas!`);
+      }
     } catch (err) {
       // If rate-limited, show a clearer message and provide easy access to token settings
       setError(err.message);
@@ -96,22 +138,40 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
 
     try {
       const existingProjects = await getProjects();
-      const existingUrls = new Set(existingProjects.map(p => p.repoUrl));
+      const existingReposMap = new Map(
+        existingProjects
+          .filter(p => p.repoUrl)
+          .map(p => [p.repoUrl, p])
+      );
       
       const reposToImport = selectedRepos.map(idx => repositories[idx]);
       
       let importedCount = 0;
+      let updatedCount = 0;
       let skippedCount = 0;
       const skippedRepos = [];
+      const updatedReposList = [];
       
       // Importa cada repositório selecionado
       for (const repo of reposToImport) {
-        // Verifica se já existe
-        if (existingUrls.has(repo.repoUrl)) {
-          skippedCount++;
-          skippedRepos.push(repo.name);
-            console.debug('[ImportProfileModal] handleImportSelected - pulando repo existente:', repo.name);
-          continue;
+        const existingProject = existingReposMap.get(repo.repoUrl);
+        
+        // Verifica se já existe e se foi atualizado
+        if (existingProject) {
+          const existingDate = new Date(existingProject.repoUpdatedAt || existingProject.updatedAt || 0);
+          const newDate = new Date(repo.updatedAt);
+          
+          // Se não foi atualizado, pula
+          if (newDate <= existingDate) {
+            skippedCount++;
+            skippedRepos.push(repo.name);
+            console.debug('[ImportProfileModal] handleImportSelected - pulando repo sem atualizações:', repo.name);
+            continue;
+          }
+          
+          // Se foi atualizado, marca para atualizar
+          console.info('[ImportProfileModal] handleImportSelected - atualizando repo:', repo.name);
+          updatedReposList.push(repo.name);
         }
         
         const extractedUsername = repo.owner || extractUsername(username);
@@ -130,9 +190,6 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           languagesData = {};
         }
         const languageNames = Object.keys(languagesData).sort((a, b) => languagesData[b] - languagesData[a]);
-        
-        // Se fetchGitHubLanguages lançar um erro de 403, propaga para exibir mensagem
-        // (fetchGitHubLanguages agora joga erro quando 403)
         
         // Busca o README do repositório
         let readme = '';
@@ -162,34 +219,49 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           webUrl: pagesUrl,
           downloadUrl: `${repo.repoUrl}/archive/refs/heads/${repo.defaultBranch}.zip`,
           repoCreatedAt: repo.createdAt,
+          repoUpdatedAt: repo.updatedAt, // Data de atualização do repositório
           owner: extractedUsername, // Nome do autor/dono do repositório
-          complexity: 'medium', // Pode ajustar baseado no tamanho
-          isCompleted: false,
-          group: 'backlog',
-          // README vai dentro de details
+          complexity: existingProject?.complexity || 'medium',
+          isCompleted: existingProject?.isCompleted || false,
+          group: existingProject?.group || 'backlog',
+          // README vai dentro de details, preserva outros detalhes se for atualização
           details: {
-            readme: readme || '',
+            ...(existingProject?.details || {}),
+            readme: readme || existingProject?.details?.readme || '',
           },
         };
 
-        console.info(`[ImportProfile] Importando ${repo.name} - README: ${readme?.length || 0} caracteres`);
+        console.info(`[ImportProfile] ${existingProject ? 'Atualizando' : 'Importando'} ${repo.name} - README: ${readme?.length || 0} caracteres`);
 
         console.debug('[ImportProfileModal] handleImportSelected - chamando onImport para repo:', repo.name);
-        await onImport(projectData);
-        importedCount++;
+        await onImport(projectData, existingProject?.id);
         
-        // Adiciona à lista de URLs existentes para evitar duplicatas na mesma importação
-        existingUrls.add(repo.repoUrl);
+        if (existingProject) {
+          updatedCount++;
+        } else {
+          importedCount++;
+        }
+        
+        // Adiciona ao mapa para evitar duplicatas na mesma importação
+        existingReposMap.set(repo.repoUrl, projectData);
       }
 
       // Mostra mensagem de sucesso com estatísticas
-      if (importedCount > 0) {
-        const message = skippedCount > 0 
-          ? `✅ ${importedCount} repositório(s) importado(s). ${skippedCount} já existente(s) foram ignorados: ${skippedRepos.join(', ')}`
-          : `✅ ${importedCount} repositório(s) importado(s) com sucesso!`;
+      const totalProcessed = importedCount + updatedCount;
+      if (totalProcessed > 0) {
+        const parts = [];
+        if (importedCount > 0) parts.push(`${importedCount} novo(s)`);
+        if (updatedCount > 0) parts.push(`${updatedCount} atualizado(s)`);
+        if (skippedCount > 0) parts.push(`${skippedCount} sem alterações`);
         
-        // Poderia mostrar um toast aqui, mas vamos usar o error temporariamente para feedback
-        if (skippedCount > 0) {
+        const message = `✅ ${parts.join(', ')}!`;
+        
+        if (updatedCount > 0) {
+          setError(`${message}\n📝 Atualizados: ${updatedReposList.join(', ')}`);
+          setTimeout(() => {
+            handleClose();
+          }, 4000);
+        } else if (skippedCount > 0) {
           setError(message);
           setTimeout(() => {
             handleClose();
@@ -198,8 +270,8 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
           handleClose();
         }
       } else {
-        console.warn('[ImportProfileModal] handleImportSelected - nenhum repositório importado (todos duplicados)');
-        setError('⚠️ Todos os repositórios selecionados já foram importados anteriormente.');
+        console.warn('[ImportProfileModal] handleImportSelected - nenhum repositório processado');
+        setError('⚠️ Todos os repositórios selecionados já estão atualizados.');
       }
     } catch (err) {
       setError('Erro ao importar repositórios: ' + err.message);
@@ -232,6 +304,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
     setUsername('');
     setRepositories([]);
     setSelectedRepos([]);
+    setUpdatedRepos(new Set());
     setError('');
     onClose();
   };
@@ -342,7 +415,9 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
                     key={index}
                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                       selectedRepos.includes(index)
-                        ? 'border-blue-500 bg-blue-500/5'
+                        ? updatedRepos.has(index)
+                          ? 'border-yellow-500 bg-yellow-500/5'
+                          : 'border-blue-500 bg-blue-500/5'
                         : 'border-dark-border hover:border-dark-hover'
                     }`}
                   >
@@ -356,6 +431,11 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="text-white font-medium truncate">{repo.name}</h4>
                         <span className="text-xs text-gray-400">@{repo.owner}</span>
+                        {updatedRepos.has(index) && (
+                          <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 text-xs rounded border border-yellow-500/30 flex items-center gap-1">
+                            ✨ Atualizado
+                          </span>
+                        )}
                         {repo.language && (
                           <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">
                             {repo.language}
