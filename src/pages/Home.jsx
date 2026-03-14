@@ -17,8 +17,51 @@ import { saveProjects } from '../utils/storage';
 import { getCustomOrder, saveCustomOrder, getCustomGroups, addCustomGroup, saveGroupsOrder, deleteCustomGroup } from '../utils/storage';
 
 const VIEW_MODE_STORAGE_KEY = 'homeViewMode';
+const FILTERS_STORAGE_KEY = 'homeFilters';
 const DEFAULT_VIEW_MODE = 'grid';
 const VALID_VIEW_MODES = new Set(['grid', 'list', 'kanban']);
+const VALID_COMPLEXITIES = new Set(['all', 'simple', 'medium', 'complex', 'unfeasible']);
+const VALID_STATUSES = new Set(['all', 'in-progress', 'completed']);
+const VALID_README_FILTERS = new Set(['all', 'with', 'without']);
+const VALID_SORT_OPTIONS = new Set(['createdAt', 'name', 'complexity', 'custom']);
+const DEFAULT_FILTERS = {
+  searchTerm: '',
+  filterComplexity: 'all',
+  filterStatus: 'all',
+  filterTags: [],
+  filterOwners: [],
+  filterReadme: 'all',
+  sortBy: 'createdAt',
+};
+
+const sanitizeArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
+const normalizeFilters = (value) => {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_FILTERS };
+  return {
+    searchTerm: typeof value.searchTerm === 'string' ? value.searchTerm : DEFAULT_FILTERS.searchTerm,
+    filterComplexity: VALID_COMPLEXITIES.has(value.filterComplexity)
+      ? value.filterComplexity
+      : DEFAULT_FILTERS.filterComplexity,
+    filterStatus: VALID_STATUSES.has(value.filterStatus)
+      ? value.filterStatus
+      : DEFAULT_FILTERS.filterStatus,
+    filterTags: sanitizeArray(value.filterTags),
+    filterOwners: sanitizeArray(value.filterOwners),
+    filterReadme: VALID_README_FILTERS.has(value.filterReadme)
+      ? value.filterReadme
+      : DEFAULT_FILTERS.filterReadme,
+    sortBy: VALID_SORT_OPTIONS.has(value.sortBy) ? value.sortBy : DEFAULT_FILTERS.sortBy,
+  };
+};
+const loadSavedFilters = () => {
+  try {
+    const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_FILTERS };
+    return normalizeFilters(JSON.parse(raw));
+  } catch {
+    return { ...DEFAULT_FILTERS };
+  }
+};
 
 export default function Home() {
   const { projects, loading, addProject, deleteProject, updateProject } = useProjects();
@@ -31,6 +74,11 @@ export default function Home() {
   const [balloonPos, setBalloonPos] = useState({ vertical: 'top', left: 0, top: 0, arrowLeft: 0 });
   const helpButtonRef = useRef(null);
   const balloonRef = useRef(null);
+  const initialFiltersRef = useRef(null);
+  if (!initialFiltersRef.current) {
+    initialFiltersRef.current = loadSavedFilters();
+  }
+  const initialFilters = initialFiltersRef.current;
   const [viewMode, setViewMode] = useState(() => {
     try {
       const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -40,13 +88,13 @@ export default function Home() {
     }
   }); // grid, list, kanban
   const [gridColumns, setGridColumns] = useState(3); // Número de colunas na grade
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterComplexity, setFilterComplexity] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterTags, setFilterTags] = useState([]); // Novo filtro de tags
-  const [filterOwners, setFilterOwners] = useState([]); // Novo filtro de autores/criadores
-  const [filterReadme, setFilterReadme] = useState('all'); // all | with | without
-  const [sortBy, setSortBy] = useState('createdAt'); // createdAt, name, complexity, custom
+  const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm);
+  const [filterComplexity, setFilterComplexity] = useState(initialFilters.filterComplexity);
+  const [filterStatus, setFilterStatus] = useState(initialFilters.filterStatus);
+  const [filterTags, setFilterTags] = useState(initialFilters.filterTags); // Novo filtro de tags
+  const [filterOwners, setFilterOwners] = useState(initialFilters.filterOwners); // Novo filtro de autores/criadores
+  const [filterReadme, setFilterReadme] = useState(initialFilters.filterReadme); // all | with | without
+  const [sortBy, setSortBy] = useState(initialFilters.sortBy); // createdAt, name, complexity, custom
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState([]); // IDs dos projetos selecionados
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
@@ -63,6 +111,25 @@ export default function Home() {
       // localStorage pode falhar em ambientes restritos; ignorar
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FILTERS_STORAGE_KEY,
+        JSON.stringify({
+          searchTerm,
+          filterComplexity,
+          filterStatus,
+          filterTags,
+          filterOwners,
+          filterReadme,
+          sortBy,
+        })
+      );
+    } catch {
+      // localStorage pode falhar em ambientes restritos; ignorar
+    }
+  }, [searchTerm, filterComplexity, filterStatus, filterTags, filterOwners, filterReadme, sortBy]);
 
   // Carregar customOrder
   useEffect(() => {

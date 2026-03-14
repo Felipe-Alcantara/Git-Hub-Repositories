@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar, Code2, ExternalLink, Download, Globe, CheckCircle2, Circle, FileText, AlertCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,6 +35,7 @@ export default function ProjectCard({
   index
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const totalLines = Object.values(project.linesOfCode || {}).reduce((sum, lines) => sum + lines, 0);
 
   const handleCardClick = (e) => {
@@ -42,7 +43,15 @@ export default function ProjectCard({
     if (e.target.closest('a') || e.target.closest('button')) {
       return;
     }
-    navigate(`/project/${project.id}`);
+    navigate(`/project/${project.id}`, {
+      state: {
+        from: {
+          pathname: location.pathname,
+          search: location.search,
+          hash: location.hash
+        }
+      }
+    });
   };
 
   const handleCheckboxClick = (e) => {

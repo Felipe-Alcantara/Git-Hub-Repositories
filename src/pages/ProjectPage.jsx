@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, ExternalLink, Download, Globe, Calendar, Code2, Lightbulb, Wrench, Bug, Target, Users, Rocket, Layers, TrendingUp, Edit2, CheckCircle2, Eye, Edit3, Pencil, FolderTree, FileText, Upload, Sparkles, Copy, Check, Plus } from 'lucide-react';
 import { getProjectById, updateProject, getCustomGroups, addCustomGroup } from '../utils/storage';
 import { format } from 'date-fns';
@@ -30,6 +30,7 @@ const sections = [
 export default function ProjectPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [project, setProject] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState(null);
@@ -354,6 +355,15 @@ export default function ProjectPage() {
     reader.readAsText(file);
   };
 
+  const handleBack = () => {
+    const from = location.state?.from;
+    if (from?.pathname) {
+      navigate(from, { replace: true });
+      return;
+    }
+    navigate('/', { replace: true });
+  };
+
   if (!project) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -371,12 +381,15 @@ export default function ProjectPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link 
-                to="/"
+              <button
+                type="button"
+                onClick={handleBack}
                 className="p-2 hover:bg-dark-hover rounded-lg transition-colors"
+                title="Voltar"
+                aria-label="Voltar"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-400" />
-              </Link>
+              </button>
               
               {isEditing ? (
                 <input
