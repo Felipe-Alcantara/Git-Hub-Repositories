@@ -541,19 +541,30 @@ export default function Home() {
     window.location.reload(); // Recarregar para mostrar novos projetos
   };
 
-  // Preservar posição do scroll
+  // Preservar posição do scroll.
+  // O save é debounced para que, ao navegar para outra rota, o cleanup
+  // cancele o último save (que registraria 0 porque o DOM já foi removido).
+  // O pagehide salva imediatamente porque em navegações full-page o cleanup
+  // do React não executa.
   useEffect(() => {
-    const persistScrollPosition = () => {
+    let debounceId;
+    const debouncedSave = () => {
+      clearTimeout(debounceId);
+      debounceId = setTimeout(() => {
+        localStorage.setItem('homeScrollPosition', window.scrollY.toString());
+      }, 100);
+    };
+    const immediateSave = () => {
       localStorage.setItem('homeScrollPosition', window.scrollY.toString());
     };
 
-    window.addEventListener('scroll', persistScrollPosition, { passive: true });
-    window.addEventListener('pagehide', persistScrollPosition);
+    window.addEventListener('scroll', debouncedSave, { passive: true });
+    window.addEventListener('pagehide', immediateSave);
 
     return () => {
-      persistScrollPosition();
-      window.removeEventListener('scroll', persistScrollPosition);
-      window.removeEventListener('pagehide', persistScrollPosition);
+      clearTimeout(debounceId);
+      window.removeEventListener('scroll', debouncedSave);
+      window.removeEventListener('pagehide', immediateSave);
     };
   }, []);
 
