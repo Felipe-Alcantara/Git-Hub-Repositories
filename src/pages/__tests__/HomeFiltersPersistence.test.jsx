@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import Home from '../Home';
@@ -67,6 +67,7 @@ describe('Home filter persistence', () => {
         });
       }
       if (key === 'homeViewMode') return 'list';
+      if (key === 'homeScrollPosition') return '420';
       if (key === 'seenHelpBalloon') return 'true';
       return null;
     });
@@ -90,5 +91,17 @@ describe('Home filter persistence', () => {
     expect(screen.getByDisplayValue('Com README')).toBeInTheDocument();
     expect(screen.getByText('Limpar filtros de tecnologias')).toBeInTheDocument();
     expect(screen.getByText('Limpar filtros de autores')).toBeInTheDocument();
+  });
+
+  it('restores the saved scroll position after rendering', async () => {
+    window.scrollTo = vi.fn();
+
+    await act(async () => {
+      render(<Home />);
+    });
+
+    await waitFor(() => {
+      expect(window.scrollTo).toHaveBeenCalledWith({ top: 420, behavior: 'auto' });
+    });
   });
 });

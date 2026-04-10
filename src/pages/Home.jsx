@@ -103,6 +103,7 @@ export default function Home() {
   const [showNewGroupInput, setShowNewGroupInput] = useState(false); // Mostra input de novo grupo
   const [refreshKey, setRefreshKey] = useState(0); // Força re-render dos grupos
   const [kanbanGroups, setKanbanGroups] = useState(['backlog', 'in-progress', 'completed']);
+  const hasRestoredHomeScrollRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -542,30 +543,38 @@ export default function Home() {
 
   // Preservar posição do scroll
   useEffect(() => {
-    const savedScroll = localStorage.getItem('homeScrollPosition');
-    const scrollPosition = parseInt(savedScroll || '0', 10);
-    let canPersistScroll = false;
-
-    const handleScroll = () => {
-      if (!canPersistScroll) return;
+    const persistScrollPosition = () => {
       localStorage.setItem('homeScrollPosition', window.scrollY.toString());
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // Pequeno delay para garantir que o conteúdo seja renderizado antes de restaurar.
-    const timeoutId = setTimeout(() => {
-      if (scrollPosition > 0) {
-        window.scrollTo({ top: scrollPosition, behavior: 'auto' });
-      }
-      canPersistScroll = true;
-    }, 100);
+    window.addEventListener('scroll', persistScrollPosition, { passive: true });
+    window.addEventListener('pagehide', persistScrollPosition);
 
     return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('scroll', handleScroll);
+      persistScrollPosition();
+      window.removeEventListener('scroll', persistScrollPosition);
+      window.removeEventListener('pagehide', persistScrollPosition);
     };
   }, []);
+
+  useEffect(() => {
+    if (loading || hasRestoredHomeScrollRef.current) return;
+
+    const savedScroll = localStorage.getItem('homeScrollPosition');
+    const scrollPosition = parseInt(savedScroll || '0', 10);
+    hasRestoredHomeScrollRef.current = true;
+
+    if (scrollPosition <= 0) return;
+
+    // Reaplica em ondas para cobrir renderizações assíncronas da lista.
+    const timers = [0, 120, 320].map((delay) => (
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPosition, behavior: 'auto' });
+      }, delay)
+    ));
+
+    return () => timers.forEach(clearTimeout);
+  }, [loading, projects.length]);
 
   if (loading) {
     return (
