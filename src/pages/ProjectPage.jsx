@@ -272,24 +272,28 @@ export default function ProjectPage() {
 
   // Preservar posição do scroll
   useEffect(() => {
-    // Pequeno delay para garantir que o conteúdo seja renderizado
-    const timeoutId = setTimeout(() => {
-      const savedScroll = localStorage.getItem('projectPageScrollPosition');
-      if (savedScroll) {
-        const scrollPosition = parseInt(savedScroll, 10);
-        if (scrollPosition > 0) {
-          window.scrollTo({ top: scrollPosition, behavior: 'instant' });
-        }
-      }
-    }, 100);
+    const savedScroll = localStorage.getItem('projectPageScrollPosition');
+    const scrollPosition = parseInt(savedScroll || '0', 10);
+    let canPersistScroll = false;
 
     const handleScroll = () => {
+      if (!canPersistScroll) return;
       localStorage.setItem('projectPageScrollPosition', window.scrollY.toString());
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Pequeno delay para garantir que o conteúdo seja renderizado antes de restaurar.
+    const timeoutId = setTimeout(() => {
+      if (scrollPosition > 0) {
+        window.scrollTo({ top: scrollPosition, behavior: 'auto' });
+      }
+      canPersistScroll = true;
+    }, 100);
+
     return () => {
       clearTimeout(timeoutId);
+      localStorage.setItem('projectPageScrollPosition', window.scrollY.toString());
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
