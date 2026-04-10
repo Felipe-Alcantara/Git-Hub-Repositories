@@ -94,6 +94,11 @@ describe('ProjectPage navigation', () => {
 
   it('returns to the previous list route when leaving project details', async () => {
     const user = userEvent.setup();
+    Object.defineProperty(window, 'scrollY', {
+      value: 420,
+      writable: true,
+      configurable: true,
+    });
     await act(async () => {
       renderWithRouter(['/?view=list']);
     });
@@ -107,6 +112,7 @@ describe('ProjectPage navigation', () => {
     await waitFor(() => {
       expect(screen.getByTestId('location-display')).toHaveTextContent('/project/1');
     });
+    expect(localStorage.setItem).toHaveBeenCalledWith('homeScrollPosition', '420');
 
     const backButton = await screen.findByRole('button', { name: /voltar/i });
     await act(async () => {

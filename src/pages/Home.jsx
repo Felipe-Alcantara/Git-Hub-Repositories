@@ -563,7 +563,6 @@ export default function Home() {
 
     return () => {
       clearTimeout(timeoutId);
-      localStorage.setItem('homeScrollPosition', window.scrollY.toString());
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);

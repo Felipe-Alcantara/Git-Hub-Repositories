@@ -43,6 +43,16 @@ export default function ProjectCard({
     if (e.target.closest('a') || e.target.closest('button')) {
       return;
     }
+
+    // Garante que a Home restaure a posição correta ao voltar do detalhe.
+    if (location.pathname === '/') {
+      try {
+        localStorage.setItem('homeScrollPosition', window.scrollY.toString());
+      } catch {
+        // Ignora falhas de persistência em ambientes restritos.
+      }
+    }
+
     navigate(`/project/${project.id}`, {
       state: {
         from: {
