@@ -566,14 +566,18 @@ export default function Home() {
 
     if (scrollPosition <= 0) return;
 
-    // Reaplica em ondas para cobrir renderizações assíncronas da lista.
-    const timers = [0, 120, 320].map((delay) => (
-      setTimeout(() => {
+    // Aguarda dois frames de animação para garantir que o DOM foi pintado antes de rolar.
+    let raf1, raf2;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
         window.scrollTo({ top: scrollPosition, behavior: 'auto' });
-      }, delay)
-    ));
+      });
+    });
 
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, [loading, projects.length]);
 
   if (loading) {
