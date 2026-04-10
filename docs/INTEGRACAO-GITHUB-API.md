@@ -186,6 +186,7 @@ Se preferir, você ainda pode criar projetos manualmente:
 - Usa apenas a API pública do GitHub
 - Não requer login ou token
 - Acessa apenas repositórios públicos
+- Com token (escopo `repo`), também consegue listar repositórios privados do seu próprio perfil
 
 ## Troubleshooting
 
@@ -260,4 +261,4 @@ Se encontrar problemas com a integração GitHub:
 
 ---
 
-**Nota**: Esta funcionalidade requer conexão com a internet e acesso à API do GitHub. Repositórios privados não podem ser acessados pela API pública.
+**Nota**: Esta funcionalidade requer conexão com a internet e acesso à API do GitHub. Repositórios privados exigem token com permissão `repo` e só são listados para o perfil autenticado.

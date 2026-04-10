@@ -2,6 +2,8 @@
 
 // Token do GitHub (opcional) - armazenado no localStorage
 const GITHUB_TOKEN_KEY = 'github_api_token';
+let cachedAuthLogin = null;
+let cachedAuthLoginToken = null;
 
 /**
  * Obtém o token do GitHub do localStorage
@@ -42,6 +44,48 @@ function getGitHubHeaders() {
   }
   
   return headers;
+}
+
+async function fetchAuthenticatedUserLogin() {
+  const token = getGitHubToken();
+  if (!token) return null;
+
+  if (cachedAuthLoginToken === token) {
+    return cachedAuthLogin;
+  }
+
+  const response = await retryableFetch('https://api.github.com/user', {
+    headers: getGitHubHeaders()
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('❌ Token do GitHub inválido ou expirado. Configure um novo token nas configurações (⚙️).');
+    }
+    return null;
+  }
+
+  const data = await response.json();
+  cachedAuthLoginToken = token;
+  cachedAuthLogin = data?.login || null;
+  return cachedAuthLogin;
+}
+
+function mapGitHubRepo(repo) {
+  return {
+    name: repo.name,
+    description: repo.description || '',
+    language: repo.language,
+    repoUrl: repo.html_url,
+    homepage: repo.homepage || '',
+    topics: repo.topics || [],
+    stars: repo.stargazers_count,
+    forks: repo.forks_count,
+    createdAt: repo.created_at,
+    updatedAt: repo.updated_at,
+    defaultBranch: repo.default_branch,
+    private: Boolean(repo.private),
+  };
 }
 
 // Conveniência: retornar informações de rate limit presentes nos headers
@@ -343,14 +387,15 @@ export async function fetchGitHubFileContent(owner, repo, path, branch = 'HEAD')
 }
 
 /**
- * Busca todos os repositórios públicos de um usuário do GitHub
+ * Busca repositórios de um usuário do GitHub.
+ * Inclui privados quando o usuário buscado é o autenticado e existe token com escopo adequado.
  * @param {string} username - Nome de usuário do GitHub
  * @returns {Promise<Array>} - Lista de repositórios
  */
 export async function fetchUserRepositories(username) {
   try {
     console.debug('[GitHub] fetchUserRepositories - iniciando para usuário', username);
-    const repos = [];
+    const reposByUrl = new Map();
     let page = 1;
     let hasMore = true;
 
@@ -381,37 +426,70 @@ export async function fetchUserRepositories(username) {
         throw new Error(`❌ Erro ${response.status}: Não foi possível buscar repositórios.`);
       }
 
-      const data = await response.json();
+        const data = await response.json();
       
-      console.debug('[GitHub] fetchUserRepositories - page', page, 'results:', data.length);
-      if (data.length === 0) {
-        hasMore = false;
-      } else {
-        repos.push(...data);
-        page++;
+        console.debug('[GitHub] fetchUserRepositories - page', page, 'results:', data.length);
+        if (data.length === 0) {
+          hasMore = false;
+        } else {
+          data.forEach(repo => reposByUrl.set(repo.html_url, repo));
+          page++;
+        }
+
+        // Limita a 500 repos para não travar
+        if (reposByUrl.size >= 500) {
+          hasMore = false;
+        }
       }
 
-      // Limita a 500 repos para não travar
-      if (repos.length >= 500) {
-        hasMore = false;
+    const token = getGitHubToken();
+    if (token) {
+      const authenticatedLogin = await fetchAuthenticatedUserLogin();
+      if (authenticatedLogin && authenticatedLogin.toLowerCase() === username.toLowerCase()) {
+        page = 1;
+        hasMore = true;
+
+        while (hasMore) {
+          const response = await retryableFetch(
+            `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&visibility=all&affiliation=owner`,
+            {
+              headers: getGitHubHeaders()
+            }
+          );
+
+          if (!response.ok) {
+            const rl = getRateLimitInfo(response);
+            if (response.status === 401) {
+              const err = new Error('❌ Token do GitHub inválido ou expirado. Configure um novo token nas configurações (⚙️).');
+              err.rateLimitInfo = rl;
+              throw err;
+            }
+            if (response.status === 403) {
+              const err = new Error('⏱️ Limite de requisições atingido. Configure um token do GitHub nas configurações (⚙️) para aumentar o limite.');
+              err.rateLimitInfo = rl;
+              throw err;
+            }
+            throw new Error(`❌ Erro ${response.status}: Não foi possível buscar repositórios privados.`);
+          }
+
+          const data = await response.json();
+          const ownerRepos = data.filter(repo => (repo.owner?.login || '').toLowerCase() === username.toLowerCase());
+          ownerRepos.forEach(repo => reposByUrl.set(repo.html_url, repo));
+
+          if (data.length === 0 || reposByUrl.size >= 500) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        }
       }
     }
 
-    console.info('[GitHub] fetchUserRepositories - total de repos obtidos:', repos.length);
+    const repos = Array.from(reposByUrl.values())
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
-    return repos.map(repo => ({
-      name: repo.name,
-      description: repo.description || '',
-      language: repo.language,
-      repoUrl: repo.html_url,
-      homepage: repo.homepage || '',
-      topics: repo.topics || [],
-      stars: repo.stargazers_count,
-      forks: repo.forks_count,
-      createdAt: repo.created_at,
-      updatedAt: repo.updated_at,
-      defaultBranch: repo.default_branch,
-    }));
+    console.info('[GitHub] fetchUserRepositories - total de repos obtidos:', repos.length);
+    return repos.map(mapGitHubRepo);
   } catch (error) {
     throw new Error(error.message || 'Erro ao buscar repositórios do usuário');
   }

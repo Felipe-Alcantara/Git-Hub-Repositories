@@ -546,6 +546,7 @@ Todos os dados dos projetos são armazenados **localmente no localStorage do seu
 ### GitHub API
 Quando você importa repositórios do GitHub:
 - Apenas dados públicos são acessados (ou seus repos privados se configurar token)
+- Repositórios privados exigem token com escopo `repo` e são listados no seu próprio perfil autenticado
 - Requisições são feitas diretamente para a API do GitHub
 - Nenhum intermediário ou servidor próprio
 - Token é armazenado apenas no seu navegador

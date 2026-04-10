@@ -69,7 +69,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
             // marca o owner para cada repo para importar depois
             allRepos.push(...repos.map(r => ({ ...r, owner: extractedUsername })));
           } else {
-            errors.push(`Nenhum repositório público encontrado para ${extractedUsername}`);
+            errors.push(`Nenhum repositório encontrado para ${extractedUsername}`);
           }
         } catch (err) {
           // registra o erro, mas continua com as outras importações
@@ -79,7 +79,7 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
       }
 
       if (allRepos.length === 0) {
-        setError(errors.length > 0 ? errors.join('; ') : 'Nenhum repositório público encontrado');
+        setError(errors.length > 0 ? errors.join('; ') : 'Nenhum repositório encontrado');
         return;
       }
 
@@ -439,6 +439,11 @@ export default function ImportProfileModal({ isOpen, onClose, onImport, onOpenTo
                         {repo.language && (
                           <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">
                             {repo.language}
+                          </span>
+                        )}
+                        {repo.private && (
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded border border-purple-500/30">
+                            Privado
                           </span>
                         )}
                       </div>

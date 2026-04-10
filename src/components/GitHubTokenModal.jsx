@@ -144,7 +144,7 @@ export default function GitHubTokenModal({ isOpen, onClose }) {
                 </a>
               </li>
               <li>Dê um nome ao token (ex: "GitHub Repositories Manager")</li>
-              <li>Selecione a permissão: <code className="bg-dark-bg px-2 py-0.5 rounded text-blue-400">public_repo</code></li>
+              <li>Selecione a permissão <code className="bg-dark-bg px-2 py-0.5 rounded text-blue-400">repo</code> para importar também repositórios privados (ou <code className="bg-dark-bg px-2 py-0.5 rounded text-blue-400">public_repo</code> para apenas públicos)</li>
               <li>Clique em "Generate token" e copie o token gerado</li>
               <li>Cole o token no campo abaixo</li>
             </ol>
